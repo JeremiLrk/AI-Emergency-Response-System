@@ -4,11 +4,38 @@ from .models import ROAD_STATUSES, Scenario
 
 
 def build_graph(scenario: Scenario, statuses=None) -> Graph:
-    """No statuses means the explicit all-open, normal-speed baseline.
+    """Convert validated roads into a fixed travel-time graph for search.
 
-    Otherwise require one externally chosen status per directed road. Never
-    interpret a noisy report as a true status or silently fill partial beliefs.
+    Returns:
+        A new directed Graph: Open uses normal time, Congested uses 1.5 times normal
+        time, and Blocked edges are absent. Source scenario records are unchanged.
+
+    Raises:
+        ValueError: Status coverage or a status label is invalid.
+
+    No Bayesian inference or HMM filtering occurs here. A future inference component
+    must choose statuses before calling this adapter. Noisy reports are not truth,
+    and missing entries are not silently filled when a status mapping is supplied.
+
+    Parameters:
+        scenario: Scenario with validated node IDs and directed Road records; normally
+            returned by load_scenario.
+        statuses: None for the all-open baseline, or a mapping (source, target) ->
+            Open/Congested/Blocked covering exactly all roads.
+
+    Preconditions:
+        Caller supplies an unmodified validated scenario and does not change statuses
+        during construction. If provided, exact status coverage and labels are checked.
+        Computed times must remain finite; Graph.add_edge checks this for included
+        arcs.
+
+    Postconditions:
+        Returns a new Graph containing every scenario node and exactly the non-Blocked
+        directed arcs. Open costs distance/speed; Congested costs 1.5 times that; None
+        means all Open. Scenario and mapping are unchanged. No report inference or
+        traffic filtering is performed.
     """
+    # Require complete explicit beliefs so missing roads cannot become Open by accident.
     if statuses is not None:
         if set(statuses) != {road.key for road in scenario.roads}:
             raise ValueError("Status snapshot must cover exactly the scenario's directed roads")
@@ -17,6 +44,7 @@ def build_graph(scenario: Scenario, statuses=None) -> Graph:
     graph = Graph(node.id for node in scenario.nodes)
     for road in scenario.roads:
         status = "Open" if statuses is None else statuses[road.key]
+        # Omit impassable arcs; zero time would incorrectly make them attractive.
         if status == "Blocked":
             continue
         multiplier = 1.5 if status == "Congested" else 1.0

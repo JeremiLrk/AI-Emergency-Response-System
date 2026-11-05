@@ -16,7 +16,35 @@ SCENARIOS = ROOT / "Scenarios"
 
 
 class ScenarioTests(unittest.TestCase):
+    """Exercise typed loading and baseline routing on all three supplied datasets.
+
+    Parameters:
+        No explicit parameters; construction/calls are managed by unittest.
+
+    Preconditions:
+        Used by unittest with the supplied scenarios available.
+
+    Postconditions:
+        Tests describe expected behavior; the class itself does not execute a check
+        until unittest runs it.
+    """
     def test_all_supplied_schemas_and_counts(self):
+        """Detect missing, duplicated or unexpectedly changed real scenario records.
+
+        Parameters:
+            self: The ScenarioTests instance receiving the call; passed automatically by
+                Python.
+
+        Preconditions:
+            Run through unittest with a valid test instance. Tests reading real data
+            require the supplied Scenarios directory; corrupt-fixture tests also require
+            setUp's temporary copy.
+
+        Postconditions:
+            On success all assertions for the behavior described above pass and the method
+            returns None. A failure/error is reported by unittest. Production scenario
+            files remain unchanged; corrupt fixtures are cleaned up by registered cleanup.
+        """
         expected = {
             "Scenario1": (5, 14, 4, 7, 18, 14, 140),
             "Scenario2": (12, 30, 10, 12, 42, 3, 15),
@@ -30,6 +58,22 @@ class ScenarioTests(unittest.TestCase):
                                   sum(map(len, s.traffic_history.values()))), counts)
 
     def test_units_capabilities_availability_and_online_visibility(self):
+        """Verify interpreted units and release rules using recognizable Scenario1 values.
+
+        Parameters:
+            self: The ScenarioTests instance receiving the call; passed automatically by
+                Python.
+
+        Preconditions:
+            Run through unittest with a valid test instance. Tests reading real data
+            require the supplied Scenarios directory; corrupt-fixture tests also require
+            setUp's temporary copy.
+
+        Postconditions:
+            On success all assertions for the behavior described above pass and the method
+            returns None. A failure/error is reported by unittest. Production scenario
+            files remain unchanged; corrupt fixtures are cleaned up by registered cleanup.
+        """
         s = load_scenario(SCENARIOS / "Scenario1")
         road = next(r for r in s.roads if r.key == ("H1", "N1"))
         self.assertAlmostEqual(road.normal_seconds, 458 / 15)
@@ -45,6 +89,22 @@ class ScenarioTests(unittest.TestCase):
 
     def test_baseline_all_pairs_against_bellman_ford(self):
         # Independent repeated relaxation checks optimal costs and route validity.
+        """Compare UCS costs and returned edges with independent relaxation for 845 pairs.
+
+        Parameters:
+            self: The ScenarioTests instance receiving the call; passed automatically by
+                Python.
+
+        Preconditions:
+            Run through unittest with a valid test instance. Tests reading real data
+            require the supplied Scenarios directory; corrupt-fixture tests also require
+            setUp's temporary copy.
+
+        Postconditions:
+            On success all assertions for the behavior described above pass and the method
+            returns None. A failure/error is reported by unittest. Production scenario
+            files remain unchanged; corrupt fixtures are cleaned up by registered cleanup.
+        """
         for directory in sorted(SCENARIOS.glob("Scenario*")):
             s = load_scenario(directory)
             graph = build_graph(s)
@@ -52,6 +112,7 @@ class ScenarioTests(unittest.TestCase):
             for start in (n.id for n in s.nodes):
                 distance = {n.id: float("inf") for n in s.nodes}
                 distance[start] = 0
+                # A shortest simple path needs at most V-1 edges; no heap/UCS code is reused.
                 for _ in range(len(s.nodes) - 1):
                     for r in s.roads:
                         distance[r.target] = min(distance[r.target], distance[r.source] + r.normal_seconds)
@@ -64,6 +125,7 @@ class ScenarioTests(unittest.TestCase):
                             self.assertAlmostEqual(route.seconds, expected)
                             self.assertEqual((route.nodes[0], route.nodes[-1]), (start, goal))
                             self.assertEqual(len(route.roads), len(route.nodes) - 1)
+                            # A plausible cost alone is insufficient: validate the returned path too.
                             total = 0
                             for a, b, road_id in zip(route.nodes, route.nodes[1:], route.roads):
                                 road = roads[road_id]
@@ -72,6 +134,22 @@ class ScenarioTests(unittest.TestCase):
                             self.assertAlmostEqual(total, route.seconds)
 
     def test_status_snapshot_is_directional_and_excludes_blocked_roads(self):
+        """Check Blocked/Congested effects without treating reverse roads as identical.
+
+        Parameters:
+            self: The ScenarioTests instance receiving the call; passed automatically by
+                Python.
+
+        Preconditions:
+            Run through unittest with a valid test instance. Tests reading real data
+            require the supplied Scenarios directory; corrupt-fixture tests also require
+            setUp's temporary copy.
+
+        Postconditions:
+            On success all assertions for the behavior described above pass and the method
+            returns None. A failure/error is reported by unittest. Production scenario
+            files remain unchanged; corrupt fixtures are cleaned up by registered cleanup.
+        """
         s = load_scenario(SCENARIOS / "Scenario1")
         statuses = {r.key: "Open" for r in s.roads}
         statuses[("H1", "N1")] = "Blocked"
@@ -87,6 +165,22 @@ class ScenarioTests(unittest.TestCase):
             build_graph(s, statuses)
 
     def test_probability_tables_reject_invalid_labels_ranges_and_row_sums(self):
+        """Reject malformed distributions without testing any unimplemented inference.
+
+        Parameters:
+            self: The ScenarioTests instance receiving the call; passed automatically by
+                Python.
+
+        Preconditions:
+            Run through unittest with a valid test instance. Tests reading real data
+            require the supplied Scenarios directory; corrupt-fixture tests also require
+            setUp's temporary copy.
+
+        Postconditions:
+            On success all assertions for the behavior described above pass and the method
+            returns None. A failure/error is reported by unittest. Production scenario
+            files remain unchanged; corrupt fixtures are cleaned up by registered cleanup.
+        """
         s = load_scenario(SCENARIOS / "Scenario1")
         for value in [-0.1, 1.1, float("nan"), True, 0.5]:
             bad = copy.deepcopy(s.traffic_probabilities)
@@ -100,19 +194,78 @@ class ScenarioTests(unittest.TestCase):
 
 
 class CorruptScenarioTests(unittest.TestCase):
+    """Alter isolated temporary fixtures; never edit supplied scenario files.
+
+    Parameters:
+        No explicit parameters; construction/calls are managed by unittest.
+
+    Preconditions:
+        Used by unittest with the supplied scenarios available.
+
+    Postconditions:
+        Tests describe expected behavior; the class itself does not execute a check
+        until unittest runs it.
+    """
     def setUp(self):
+        """Copy Scenario1 for each test and register cleanup even if an assertion fails.
+
+        Parameters:
+            self: The CorruptScenarioTests instance receiving the call; passed
+                automatically by Python.
+
+        Preconditions:
+            unittest invokes this before each corrupt-fixture test; the scenario and tests
+            directory must be readable/writable as needed.
+
+        Postconditions:
+            Creates an isolated temporary Scenario1 copy, assigns self.temp/self.directory,
+            and registers cleanup. Supplied scenarios are unchanged.
+        """
         self.temp = tempfile.TemporaryDirectory(dir=ROOT / "tests")
         self.addCleanup(self.temp.cleanup)
         self.directory = Path(self.temp.name) / "scenario"
         shutil.copytree(SCENARIOS / "Scenario1", self.directory)
 
     def replace_text(self, filename, old, new):
+        """Change a known fixture value, failing if the expected original is absent.
+
+        Parameters:
+            self: The CorruptScenarioTests instance receiving the call; passed
+                automatically by Python.
+            filename: Filename inside this test's temporary scenario copy.
+            old: Expected original text; its presence is asserted.
+            new: Replacement text used to corrupt or adjust the temporary fixture.
+
+        Preconditions:
+            setUp must have created self.directory. The named temporary file must exist and
+            contain old.
+
+        Postconditions:
+            Replaces every occurrence of old with new in the temporary file and returns
+            None. Original scenarios are unchanged; missing old triggers AssertionError.
+        """
         path = self.directory / filename
         text = path.read_text(encoding="utf-8")
         self.assertIn(old, text)
         path.write_text(text.replace(old, new), encoding="utf-8")
 
     def test_dangling_road_reference(self):
+        """A road cannot refer to a node absent from city_graph.json.
+
+        Parameters:
+            self: The CorruptScenarioTests instance receiving the call; passed
+                automatically by Python.
+
+        Preconditions:
+            Run through unittest with a valid test instance. Tests reading real data
+            require the supplied Scenarios directory; corrupt-fixture tests also require
+            setUp's temporary copy.
+
+        Postconditions:
+            On success all assertions for the behavior described above pass and the method
+            returns None. A failure/error is reported by unittest. Production scenario
+            files remain unchanged; corrupt fixtures are cleaned up by registered cleanup.
+        """
         path = self.directory / "city_graph.json"
         data = json.loads(path.read_text())
         data["roads"][0]["to"] = "unknown"
@@ -121,6 +274,22 @@ class CorruptScenarioTests(unittest.TestCase):
             load_scenario(self.directory)
 
     def test_zero_speed(self):
+        """Zero speed is invalid because base travel time divides distance by speed.
+
+        Parameters:
+            self: The CorruptScenarioTests instance receiving the call; passed
+                automatically by Python.
+
+        Preconditions:
+            Run through unittest with a valid test instance. Tests reading real data
+            require the supplied Scenarios directory; corrupt-fixture tests also require
+            setUp's temporary copy.
+
+        Postconditions:
+            On success all assertions for the behavior described above pass and the method
+            returns None. A failure/error is reported by unittest. Production scenario
+            files remain unchanged; corrupt fixtures are cleaned up by registered cleanup.
+        """
         path = self.directory / "city_graph.json"
         data = json.loads(path.read_text())
         data["roads"][0]["speed"] = 0
@@ -129,18 +298,67 @@ class CorruptScenarioTests(unittest.TestCase):
             load_scenario(self.directory)
 
     def test_conflicting_local_weather(self):
+        """Reports for the same road must agree on its known local weather.
+
+        Parameters:
+            self: The CorruptScenarioTests instance receiving the call; passed
+                automatically by Python.
+
+        Preconditions:
+            Run through unittest with a valid test instance. Tests reading real data
+            require the supplied Scenarios directory; corrupt-fixture tests also require
+            setUp's temporary copy.
+
+        Postconditions:
+            On success all assertions for the behavior described above pass and the method
+            returns None. A failure/error is reported by unittest. Production scenario
+            files remain unchanged; corrupt fixtures are cleaned up by registered cleanup.
+        """
         self.replace_text("road_reports.csv", "N1,N2,Rain,Police", "N1,N2,Storm,Police")
         with self.assertRaisesRegex(ValueError, "conflicting known weather"):
             load_scenario(self.directory)
 
     def test_duplicate_traffic_observation(self):
+        """A directed road cannot have two observations with the same ordinal index.
+
+        Parameters:
+            self: The CorruptScenarioTests instance receiving the call; passed
+                automatically by Python.
+
+        Preconditions:
+            Run through unittest with a valid test instance. Tests reading real data
+            require the supplied Scenarios directory; corrupt-fixture tests also require
+            setUp's temporary copy.
+
+        Postconditions:
+            On success all assertions for the behavior described above pass and the method
+            returns None. A failure/error is reported by unittest. Production scenario
+            files remain unchanged; corrupt fixtures are cleaned up by registered cleanup.
+        """
         path = self.directory / "observed_traffic.csv"
         with path.open("a") as stream:
+            # The source file may lack a trailing newline; separate the appended record.
             stream.write("\n1,H1,N1,Low\n")
         with self.assertRaisesRegex(ValueError, "duplicate"):
             load_scenario(self.directory)
 
     def test_history_is_sorted_per_road(self):
+        """CSV record ordering must not change each road's reconstructed history.
+
+        Parameters:
+            self: The CorruptScenarioTests instance receiving the call; passed
+                automatically by Python.
+
+        Preconditions:
+            Run through unittest with a valid test instance. Tests reading real data
+            require the supplied Scenarios directory; corrupt-fixture tests also require
+            setUp's temporary copy.
+
+        Postconditions:
+            On success all assertions for the behavior described above pass and the method
+            returns None. A failure/error is reported by unittest. Production scenario
+            files remain unchanged; corrupt fixtures are cleaned up by registered cleanup.
+        """
         path = self.directory / "observed_traffic.csv"
         header, *rows = path.read_text().splitlines()
         path.write_text("\n".join([header, *reversed(rows)]) + "\n")
@@ -148,11 +366,43 @@ class CorruptScenarioTests(unittest.TestCase):
         self.assertEqual([o.observation_nr for o in s.traffic_history[("H1", "N1")]], list(range(1, 11)))
 
     def test_available_with_remaining_busy_time_is_invalid(self):
+        """Available and positive remaining busy time form a contradictory input state.
+
+        Parameters:
+            self: The CorruptScenarioTests instance receiving the call; passed
+                automatically by Python.
+
+        Preconditions:
+            Run through unittest with a valid test instance. Tests reading real data
+            require the supplied Scenarios directory; corrupt-fixture tests also require
+            setUp's temporary copy.
+
+        Postconditions:
+            On success all assertions for the behavior described above pass and the method
+            returns None. A failure/error is reported by unittest. Production scenario
+            files remain unchanged; corrupt fixtures are cleaned up by registered cleanup.
+        """
         self.replace_text("responders.csv", "Available,0", "Available,2.5")
         with self.assertRaisesRegex(ValueError, "zero remaining"):
             load_scenario(self.directory)
 
     def test_fractional_time_is_preserved_and_impossible_deadline_warns(self):
+        """Retain fractional seconds and distinguish infeasibility from corrupt structure.
+
+        Parameters:
+            self: The CorruptScenarioTests instance receiving the call; passed
+                automatically by Python.
+
+        Preconditions:
+            Run through unittest with a valid test instance. Tests reading real data
+            require the supplied Scenarios directory; corrupt-fixture tests also require
+            setUp's temporary copy.
+
+        Postconditions:
+            On success all assertions for the behavior described above pass and the method
+            returns None. A failure/error is reported by unittest. Production scenario
+            files remain unchanged; corrupt fixtures are cleaned up by registered cleanup.
+        """
         self.replace_text("responders.csv", "Busy,10", "Busy,10.25")
         self.replace_text("incidents.csv", "I5,N1,High,200", "I5,N1,High,40.5")
         s = load_scenario(self.directory)

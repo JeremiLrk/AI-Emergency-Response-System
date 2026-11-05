@@ -1,4 +1,4 @@
-# AI-Emergency-Response-System
+﻿# AI-Emergency-Response-System
 Artificial Intelligence Practicum — Emergency response planning using search, Bayesian reasoning, constraint satisfaction, and Hidden Markov Models.
 
 First Prompt:
@@ -38,6 +38,7 @@ The Scenario1 example returns 48.06666666666667 seconds. It is not a dispatch pl
 - `emergency_response/routing.py`: baseline or complete road-status snapshots.
 - `emergency_response/search.py`: handwritten uniform-cost search.
 - `tests/`: small targeted checks plus all-pairs checks on all three datasets.
+- [Code walkthrough and explanation](CODE_GUIDE.md).
 - [Actual schemas and data audit](DATA_SCHEMA.md).
 - [Design decisions and course connections](DESIGN.md).
 - [Tests and limits](TESTING.md).
