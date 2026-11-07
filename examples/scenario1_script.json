@@ -1,0 +1,6 @@
+[
+  {"time": 0, "responder_id": "R1", "incident_id": "I2"},
+  {"time": 0, "responder_id": "R2", "incident_id": "I4"},
+  {"time": 10, "responder_id": "R4", "incident_id": "I1"},
+  {"time": 120, "responder_id": "R1", "incident_id": "I5"}
+]

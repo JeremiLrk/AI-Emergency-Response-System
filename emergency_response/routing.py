@@ -13,8 +13,9 @@ def build_graph(scenario: Scenario, statuses=None) -> Graph:
     Raises:
         ValueError: Status coverage or a status label is invalid.
 
-    No Bayesian inference or HMM filtering occurs here. A future inference component
-    must choose statuses before calling this adapter. Noisy reports are not truth,
+    No Bayesian inference or HMM filtering occurs here. Callers must
+    choose statuses before calling this explicit-label adapter. The probability-
+    preserving Bayesian path uses risk_routing.build_bayesian_graph instead. Noisy reports are not truth,
     and missing entries are not silently filled when a status mapping is supplied.
 
     Parameters:

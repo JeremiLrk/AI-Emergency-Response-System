@@ -309,7 +309,7 @@ def validate_road_probabilities(data):
     Rows are P(status|weather) and, for each source, P(report|true status).
     Weather prior is retained for roads whose local weather is unknown.
     Valid structure does not establish that different reports are independent;
-    that remains an explicit assumption for the future inference component.
+    that remains an explicit assumption for the Bayesian inference component.
 
     Parameters:
         data: Parsed road_probabilities.json object containing weather prior, status-
