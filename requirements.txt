@@ -1,0 +1,2 @@
+# Tested CP-SAT version. Install in a virtual environment, not globally.
+ortools==9.15.6755

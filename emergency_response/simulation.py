@@ -69,7 +69,7 @@ class _Simulator:
     Postconditions: state transitions and commitments are recorded in isolated state.
     """
 
-    def __init__(self, scenario, graph, dispatcher, strict_deadlines, decision_times):
+    def __init__(self, scenario, graph, dispatcher, strict_deadlines, decision_times, route_planner=None):
         """Create isolated engine state and a private copy of the routing graph.
 
         Parameters:
@@ -80,6 +80,8 @@ class _Simulator:
             strict_deadlines: bool; True forbids late dispatch and closes missed
                 pending work, False leaves missed work eligible for later response.
             decision_times: Explicit optional wake-up times, unrelated to hidden input.
+            route_planner: Optional callable(graph,start,goal,max_seconds=...);
+                receives a strict arrival-duration budget, never future incidents.
         Preconditions: input IDs/field consistency follow load_scenario; duplicate
             entity IDs, graph coverage, time ranges and policy type are rechecked.
         Postconditions: initializes events at zero, releases, initial availability
@@ -88,6 +90,9 @@ class _Simulator:
         if not isinstance(strict_deadlines, bool) or not callable(dispatcher):
             raise ValueError("Expected bool strict_deadlines and callable dispatcher")
         self.dispatcher = dispatcher
+        if route_planner is not None and not callable(route_planner):
+            raise ValueError("route_planner must be callable or None")
+        self.route_planner = route_planner
         self.strict = strict_deadlines
         self.now = 0.0
         self.serial = count()
@@ -222,7 +227,19 @@ class _Simulator:
                 incident = view.incident
                 if view.status != "pending" or incident.required_capability not in responder.capabilities:
                     continue
-                route = ucs(self.graph, responder.location, incident.location)
+                if self.route_planner is None:
+                    route = ucs(self.graph, responder.location, incident.location)
+                else:
+                    budget = max(0.0, incident.deadline-self.now) if self.strict else None
+                    route = self.route_planner(self.graph, responder.location,
+                                              incident.location, max_seconds=budget)
+                    if route is not None:
+                        self._check_route(route, responder.location, incident.location)
+                    # Subtraction can round a duration budget below a feasible
+                    # shortest path. The simulator's absolute arrival check wins.
+                    if self.strict and (route is None or
+                            _add_time(self.now, route.seconds) > incident.deadline):
+                        route = ucs(self.graph, responder.location, incident.location)
                 if route is None:
                     continue
                 arrival = _add_time(self.now, route.seconds)
@@ -232,6 +249,26 @@ class _Simulator:
                 completion = _add_time(arrival, incident.time_required)
                 candidates.append(Candidate(responder.id, incident.id, route, arrival, completion, on_time))
         return DecisionSnapshot(self.now, responders, incidents, tuple(candidates), self.strict)
+
+    def _check_route(self, route, start, goal):
+        """Check injected route duration against original graph costs.
+
+        Parameters: route is a planner result; start/goal are candidate endpoints.
+        Preconditions: fixed graph; road identifiers identify directed edges.
+        Postconditions: returns None or raises ValueError for invented edges,
+            endpoints or duration. Exposure can never substitute for travel time.
+        """
+        if (not route.nodes or route.nodes[0] != start or route.nodes[-1] != goal
+                or len(route.nodes) != len(route.roads)+1):
+            raise ValueError("Planner returned invalid route endpoints/shape")
+        seconds = 0.0
+        for a, b, road_id in zip(route.nodes, route.nodes[1:], route.roads):
+            edges = [e for e in self.graph.neighbors(a) if e.target == b and e.road_id == road_id]
+            if len(edges) != 1:
+                raise ValueError("Planner returned unknown/ambiguous directed edge")
+            seconds += edges[0].seconds
+        if not isfinite(seconds) or route.seconds != seconds:
+            raise ValueError("Planner duration must equal original graph travel seconds")
 
     def _dispatch(self, snapshot):
         """Validate a proposed batch completely before committing any assignment.
@@ -343,7 +380,7 @@ class _Simulator:
 
 
 def simulate(scenario: Scenario, graph: Graph, dispatcher, *, strict_deadlines=True,
-             decision_times=()):
+             decision_times=(), route_planner=None):
     """Execute scripted/callback dispatches using deterministic route estimates.
 
     Parameters:
@@ -357,6 +394,10 @@ def simulate(scenario: Scenario, graph: Graph, dispatcher, *, strict_deadlines=T
             all arrivals still receive independent met/missed results.
         decision_times: Optional explicit nonnegative wake-ups for scripted tests;
             normal releases/arrivals/completions/deadlines already trigger decisions.
+        route_planner: Optional independent routing callable; None preserves UCS.
+            Strict mode caps selected travel at the remaining arrival budget.
+            Returned durations are checked against graph costs; historical exposure
+            is never used for arrivals, completion times or responder availability.
 
     Preconditions:
         Scenario validated, callback finite/prompt, no concurrent input mutation.
@@ -373,4 +414,4 @@ def simulate(scenario: Scenario, graph: Graph, dispatcher, *, strict_deadlines=T
         ValueError: Invalid policy/time/dispatch batch or unrepresentable time advance.
         Dispatcher exceptions propagate; an invalid run is not returned as success.
     """
-    return _Simulator(scenario, graph, dispatcher, strict_deadlines, decision_times).run()
+    return _Simulator(scenario, graph, dispatcher, strict_deadlines, decision_times, route_planner).run()

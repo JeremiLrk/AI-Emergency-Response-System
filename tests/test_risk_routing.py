@@ -183,7 +183,7 @@ class CLITests(unittest.TestCase):
         """A Bayesian route requires an explicit threshold; baseline may not silently ignore one."""
         for options in (["--route", "N1", "N2", "--routing-policy", "bayesian"],
                         ["--block-threshold", ".2"],
-                        ["--routing-policy", "bayesian", "--block-threshold", ".2"]):
+                        ["--routing-policy", "bayesian"]):
             with patch("sys.argv", ["run.py", str(ROOT / "Scenarios/Scenario1"), *options]), contextlib.redirect_stderr(io.StringIO()):
                 with self.assertRaises(SystemExit):
                     run.main()

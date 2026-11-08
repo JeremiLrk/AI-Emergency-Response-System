@@ -1,6 +1,6 @@
 # How to read the code
 
-This guide describes the current implementation. For future traffic filtering and allocation decisions, read `DESIGN.md`. For exact input columns and matrix
+This guide describes the current implementation. For traffic integration decisions and extensions, read `DESIGN.md`. For exact input columns and matrix
 layouts, read `DATA_SCHEMA.md`.
 
 ## Follow one run
@@ -103,7 +103,8 @@ Traffic history is grouped by directed road and sorted by `observation_nr`.
 Those indices never enter the incident release-time calculation. Bayesian report
 tables use `table[true_status][reported_status]`; HMM transition tables use
 `transition[current][next]`, and emissions use `emission[hidden][observed]`.
-The loader only validates tables; bayesian.py uses road CPTs afterward. HMM filtering remains deferred.
+The loader only validates tables; bayesian.py uses road CPTs afterward and hmm.py
+uses the traffic tables in independent Forward filtering.
 
 ## Graph and routing policy: graph.py and routing.py
 
@@ -122,7 +123,7 @@ It requires complete mappings so an omitted road does not silently become Open.
 It creates a new graph without changing the scenario. This explicit-label
 adapter remains for baseline/tests. Bayesian integration instead calls
 build_bayesian_graph with full distributions; it does not reduce them to labels.
-Traffic multipliers are not yet applied.
+Traffic multipliers are deliberately not applied; traffic exposure is separate.
 
 ## Uniform-cost search: search.py
 
@@ -166,8 +167,8 @@ copies to verify rejection/warning behavior without editing the supplied inputs.
 python -m unittest discover -s tests -v
 ```
 
-Read `TESTING.md` for coverage and limits. HMM filtering, OR-Tools allocation,
-and standalone plan validation remain future work. Scripted event execution is described below.
+Read TESTING.md for coverage and limits. Automatic/scripted execution, required
+exports and standalone original-data validation are described below.
 
 
 ## Bayesian reasoning and probability-aware routing
@@ -223,10 +224,106 @@ completed+missed, closing only remaining unassigned work when no events remain.
 
 `scripted.py` reads JSON fixtures and consumes each timestamp once. Pass its
 decision_times as explicit controller wake-ups. A script is for testing execution,
-not a replacement for the future CP-SAT allocator. Its author can know input;
+not a replacement for the CP-SAT allocator. Its author can know input;
 the controller still checks that every dispatch occurs after actual revelation.
 
 The result contains chronological commitments and processed event logs. Times
 are deterministic modeled estimates, not guaranteed arrivals. The CLI adds
 Bayesian blockage bounds per commitment without sampling actual road failures.
 All functions and view classes document parameter meanings and pre/postconditions.
+
+
+## Online allocation: allocation.py
+
+CspDispatcher(snapshot) builds a fresh Boolean model from current candidates only.
+x[r,i] selects one pair; y[i]=sum_r x[r,i] is Boolean, so at most one responder
+handles an incident. Responder sums <=1 prevent double booking. Missing pairs
+have no variable. Optional unassignment makes all-zero feasible but priority
+coverage objectives ensure it cannot win merely by having zero response cost.
+
+Sequential objectives maximize Critical/High/Medium/Low counts, then on-time counts
+in that order only when late responses are allowed, then minimize ceil-millisecond
+response (arrival-release). No deadline/urgency ranking or waiting-age bonus exists.
+Only proven optimum values become equality constraints for later phases. Execution
+times remain unrounded. Per-phase solver statuses, bounds and elapsed solver time
+are recorded in diagnostics; FEASIBLE/UNKNOWN/budget exhaustion never masquerade
+as proven hierarchy optimality. No future inputs are loaded or passed in.
+
+NearestDispatcher uses the same candidates, sorted by travel and stable IDs,
+greedily avoiding used responders/incidents. It provides an intentionally simple
+comparison, not a guaranteed best matching. statistics.summarize reports completed
+count, independent met count, all/handled percentages and mean response over
+completed work (None when empty). run.py defaults to CSP, with nearest, script,
+route and comparison options. benchmark.py repeats the controlled evaluation.
+
+Inspect TESTING.md and results/allocation_comparison.json for observed results.
+In Scenario3, different equal-cost initial unit placements affect future calls;
+CP-SAT's local optimum does not prove a globally best emergency-response sequence.
+
+## Historical HMM and traffic routing
+
+`hmm.forward_filter(tables, observations)` is the mathematical layer. It starts
+from the supplied prior, applies the first emission, then repeats transition
+prediction and emission reweighting/normalization. It returns all three states.
+`hmm.infer_traffic(scenario)` sorts/validates each directed history, calls Forward
+once per road and returns TrafficBelief records including observation_count and
+prior_only. No histories means that scenario's prior, not assumed Low traffic.
+These functions know nothing about graph costs, dispatches or simulation time.
+
+`TrafficRouter(roads, beliefs, ...)` is the independent policy layer. Its startup
+copies of normal_seconds*P(High) weights use directed road IDs. `exposure(route)`
+adds these scores without interpreting them as time. `_shortest` is a handwritten
+UCS with (travel,exposure) queue costs. `_bounded` keeps nondominated time/score
+labels rather than one cost per node, under an explicit travel-time resource cap.
+The call method first computes a shortest reference, bounds permitted travel,
+and checks the configured minimum relative exposure reduction. `describe` reports
+actual score, shortest reference time/score, extra seconds and relative reduction.
+The label guard raises visibly on excessive search, rather than claiming success.
+
+`simulate(..., route_planner=None)` preserves original scalar UCS by default.
+With a TrafficRouter it supplies graph/current endpoints/strict remaining duration
+only. `_check_route` verifies shape, directed edges and graph-duration sum. The
+simulator still calculates arrivals and completion using route.seconds, and
+availability still includes treatment. Neither exposure nor HMM probabilities
+reach the CP-SAT objective. Strict mode refuses detours past the deadline; late
+mode permits them and records the resulting deadline outcome independently.
+
+`run.py --traffic-policy hmm-tie|hmm-bounded` opts into these preferences with
+Bayesian routing. Bounded mode needs an explicit --max-extra-fraction, with
+--min-exposure-reduction default .10. Default bayesian-only preserves previous
+UCS behavior. JSON reports full traffic beliefs/provenance and separates traffic
+scores from route.seconds and route blockage bounds. `benchmark_traffic.py` runs
+all three policies with both allocators/deadline modes and audits all endpoint
+pairs. Full fixed-parameter results are in results/traffic_comparison.json.
+
+## Required files and independent replay
+
+`outputs.make_plan(result)` copies each AssignmentRecord's responder/incident IDs,
+route.nodes and departure_time to exactly the assignment's list/row schema.
+`write_outputs` invokes independent validation, checks replay travel/arrival/
+completion against records and independent statistics against summarize(result),
+then writes plan.json and statistics.txt. It performs no new allocation/routing
+or scheduling. render_statistics adds definitions, units, unhandled IDs, validity
+and settings to the existing metrics. Empty means/denominators are N/A.
+
+`plan_validation.load_plan(path)` rejects malformed JSON, duplicate keys and
+NaN/Infinity. `validate_plan(original_scenario, decoded_plan, ...)` checks schema,
+IDs, capability, releases, readiness/previous completion, current location,
+directed original roads, Bayesian edge filtering/cost and arrival deadlines.
+It sorts by start time, retaining input order for same-time zero-duration jobs.
+Travel and treatment are reconstructed from original inputs, not exported claims.
+It shares Bayesian inference and a statistics dataclass but no simulator/search/
+graph builder/summarize implementation. Structured errors name row and constraint.
+
+`PlanValidation.valid` is relative to declared routing/deadline policy.
+`deadline_compliant` additionally requires every assigned arrival to be on time;
+it does not claim all incidents were handled. Unhandled IDs/metrics show coverage.
+Invalid plans have statistics=None. A valid empty plan can still perform poorly.
+The standalone validate_plan.py prints this report and exits0/1/2 for policy-valid,
+invalid plan or file/configuration error; it does not need OR-Tools or replan.
+
+run.py normal/script runs export by default to the current directory; --output-dir
+selects another destination, and --compare uses separate csp/nearest subdirectories.
+--route is diagnostic and produces no assignment files. stdout retains the richer
+simulation JSON with output paths/validation. Existing routing/allocator defaults
+remain unchanged; README has an explicit Bayesian+HMM full-system command.

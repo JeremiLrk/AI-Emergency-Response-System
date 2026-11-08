@@ -63,7 +63,7 @@ class ScriptedTests(unittest.TestCase):
                 str(ROOT / "examples/scenario1_script.json"), "--routing-policy", "bayesian",
                 "--block-threshold", ".2"]
         output = io.StringIO()
-        with patch("sys.argv", args), contextlib.redirect_stdout(output):
+        with tempfile.TemporaryDirectory(dir=ROOT / "tests") as directory, patch("sys.argv", args+["--output-dir",directory]), contextlib.redirect_stdout(output):
             run.main()
         result = json.loads(output.getvalue())
         self.assertEqual(len(result["simulation"]["assignments"]), 4)
@@ -78,7 +78,7 @@ class ScriptedTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests") as directory:
             path = Path(directory) / "late.json"
             path.write_text(json.dumps([{"time": 100, "responder_id": "R2", "incident_id": "I1"}]))
-            args = ["run.py", str(ROOT / "Scenarios/Scenario1"), "--simulate-script", str(path), "--allow-late"]
+            args = ["run.py", str(ROOT / "Scenarios/Scenario1"), "--simulate-script", str(path), "--allow-late", "--output-dir", directory]
             output = io.StringIO()
             with patch("sys.argv", args), contextlib.redirect_stdout(output):
                 run.main()
@@ -89,7 +89,7 @@ class ScriptedTests(unittest.TestCase):
     def test_cli_rejects_conflicting_or_incomplete_simulation_options(self):
         """Simulation arguments cannot silently ignore deadline/risk/route settings."""
         script = str(ROOT / "examples/scenario1_script.json")
-        for options in (["--allow-late"], ["--simulate-script", script, "--route", "N1", "N2"],
+        for options in (["--route", "N1", "N2", "--allow-late"], ["--simulate-script", script, "--route", "N1", "N2"],
                         ["--simulate-script", script, "--routing-policy", "bayesian"]):
             with patch("sys.argv", ["run.py", str(ROOT / "Scenarios/Scenario1"), *options]), contextlib.redirect_stderr(io.StringIO()):
                 with self.assertRaises(SystemExit):

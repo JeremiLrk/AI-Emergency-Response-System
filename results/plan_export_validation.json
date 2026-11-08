@@ -1,0 +1,997 @@
+{
+  "configuration": {
+    "allocator": "csp",
+    "routing_policy": "bayesian",
+    "block_threshold": 0.2,
+    "traffic_policy": "hmm-bounded",
+    "max_extra_fraction": 0.05,
+    "min_exposure_reduction": 0.1,
+    "solver_time_limit_seconds": 2.0,
+    "solver_workers": 1,
+    "solver_seed": 0
+  },
+  "default_root_example": "Scenario1 strict; identical to saved example",
+  "validity_scope": "Original-data replay under declared estimates/policy; not optimality or actual road safety",
+  "comparisons": [
+    {
+      "scenario": "Scenario1",
+      "deadline_policy": "strict",
+      "plan": "results/plans/Scenario1/strict/plan.json",
+      "statistics_file": "results/plans/Scenario1/strict/statistics.txt",
+      "file_matches_simulation": true,
+      "unchanged_from_previous_hmm_benchmark": true,
+      "standalone_validator_exit_code": 0,
+      "validation": {
+        "valid": true,
+        "strict_deadlines": true,
+        "deadline_compliant": true,
+        "errors": [],
+        "warnings": [],
+        "assignments": [
+          {
+            "row": 0,
+            "responder_id": "R1",
+            "incident_id": "I2",
+            "departure_time": 0.0,
+            "travel_seconds": 86.77803468208094,
+            "arrival_time": 86.77803468208094,
+            "completion_time": 116.77803468208094,
+            "on_time": true
+          },
+          {
+            "row": 1,
+            "responder_id": "R2",
+            "incident_id": "I4",
+            "departure_time": 0.0,
+            "travel_seconds": 53.067822736030834,
+            "arrival_time": 53.067822736030834,
+            "completion_time": 63.067822736030834,
+            "on_time": true
+          },
+          {
+            "row": 2,
+            "responder_id": "R3",
+            "incident_id": "I3",
+            "departure_time": 0.0,
+            "travel_seconds": 122.54913294797689,
+            "arrival_time": 122.54913294797689,
+            "completion_time": 142.5491329479769,
+            "on_time": true
+          },
+          {
+            "row": 3,
+            "responder_id": "R4",
+            "incident_id": "I1",
+            "departure_time": 10.0,
+            "travel_seconds": 56.96878612716763,
+            "arrival_time": 66.96878612716763,
+            "completion_time": 76.96878612716763,
+            "on_time": true
+          },
+          {
+            "row": 4,
+            "responder_id": "R4",
+            "incident_id": "I6",
+            "departure_time": 76.96878612716763,
+            "travel_seconds": 46.22273603082852,
+            "arrival_time": 123.19152215799616,
+            "completion_time": 133.19152215799616,
+            "on_time": true
+          },
+          {
+            "row": 5,
+            "responder_id": "R1",
+            "incident_id": "I5",
+            "departure_time": 116.77803468208094,
+            "travel_seconds": 77.34714003944772,
+            "arrival_time": 194.12517472152865,
+            "completion_time": 214.12517472152865,
+            "on_time": true
+          }
+        ],
+        "unhandled_incident_ids": [
+          "I7"
+        ],
+        "statistics": {
+          "total_incidents": 7,
+          "handled": 6,
+          "deadlines_met": 6,
+          "unhandled": 1,
+          "responders_used": 4,
+          "average_response_seconds": 91.11341222879685,
+          "deadlines_met_percent_all": 85.71428571428571,
+          "deadlines_met_percent_handled": 100.0,
+          "handled_by_priority": {
+            "Critical": 2,
+            "High": 4,
+            "Medium": 0,
+            "Low": 0
+          }
+        }
+      }
+    },
+    {
+      "scenario": "Scenario1",
+      "deadline_policy": "allow_late",
+      "plan": "results/plans/Scenario1/allow_late/plan.json",
+      "statistics_file": "results/plans/Scenario1/allow_late/statistics.txt",
+      "file_matches_simulation": true,
+      "unchanged_from_previous_hmm_benchmark": true,
+      "standalone_validator_exit_code": 0,
+      "validation": {
+        "valid": true,
+        "strict_deadlines": false,
+        "deadline_compliant": false,
+        "errors": [],
+        "warnings": [
+          {
+            "row": 4,
+            "code": "deadline",
+            "message": "Estimated arrival exceeds absolute arrival deadline"
+          },
+          {
+            "row": 6,
+            "code": "deadline",
+            "message": "Estimated arrival exceeds absolute arrival deadline"
+          }
+        ],
+        "assignments": [
+          {
+            "row": 0,
+            "responder_id": "R1",
+            "incident_id": "I2",
+            "departure_time": 0.0,
+            "travel_seconds": 86.77803468208094,
+            "arrival_time": 86.77803468208094,
+            "completion_time": 116.77803468208094,
+            "on_time": true
+          },
+          {
+            "row": 1,
+            "responder_id": "R2",
+            "incident_id": "I4",
+            "departure_time": 0.0,
+            "travel_seconds": 53.067822736030834,
+            "arrival_time": 53.067822736030834,
+            "completion_time": 63.067822736030834,
+            "on_time": true
+          },
+          {
+            "row": 2,
+            "responder_id": "R3",
+            "incident_id": "I3",
+            "departure_time": 0.0,
+            "travel_seconds": 122.54913294797689,
+            "arrival_time": 122.54913294797689,
+            "completion_time": 142.5491329479769,
+            "on_time": true
+          },
+          {
+            "row": 3,
+            "responder_id": "R4",
+            "incident_id": "I1",
+            "departure_time": 10.0,
+            "travel_seconds": 56.96878612716763,
+            "arrival_time": 66.96878612716763,
+            "completion_time": 76.96878612716763,
+            "on_time": true
+          },
+          {
+            "row": 4,
+            "responder_id": "R2",
+            "incident_id": "I6",
+            "departure_time": 63.067822736030834,
+            "travel_seconds": 77.34714003944772,
+            "arrival_time": 140.41496277547856,
+            "completion_time": 150.41496277547856,
+            "on_time": false
+          },
+          {
+            "row": 5,
+            "responder_id": "R1",
+            "incident_id": "I5",
+            "departure_time": 116.77803468208094,
+            "travel_seconds": 77.34714003944772,
+            "arrival_time": 194.12517472152865,
+            "completion_time": 214.12517472152865,
+            "on_time": true
+          },
+          {
+            "row": 6,
+            "responder_id": "R3",
+            "incident_id": "I7",
+            "departure_time": 142.5491329479769,
+            "travel_seconds": 69.48131021194605,
+            "arrival_time": 212.03044315992292,
+            "completion_time": 262.0304431599229,
+            "on_time": false
+          }
+        ],
+        "unhandled_incident_ids": [],
+        "statistics": {
+          "total_incidents": 7,
+          "handled": 7,
+          "deadlines_met": 5,
+          "unhandled": 0,
+          "responders_used": 4,
+          "average_response_seconds": 102.27633673574091,
+          "deadlines_met_percent_all": 71.42857142857143,
+          "deadlines_met_percent_handled": 71.42857142857143,
+          "handled_by_priority": {
+            "Critical": 2,
+            "High": 5,
+            "Medium": 0,
+            "Low": 0
+          }
+        }
+      }
+    },
+    {
+      "scenario": "Scenario2",
+      "deadline_policy": "strict",
+      "plan": "results/plans/Scenario2/strict/plan.json",
+      "statistics_file": "results/plans/Scenario2/strict/statistics.txt",
+      "file_matches_simulation": true,
+      "unchanged_from_previous_hmm_benchmark": true,
+      "standalone_validator_exit_code": 0,
+      "validation": {
+        "valid": true,
+        "strict_deadlines": true,
+        "deadline_compliant": true,
+        "errors": [],
+        "warnings": [],
+        "assignments": [
+          {
+            "row": 0,
+            "responder_id": "R1",
+            "incident_id": "I1",
+            "departure_time": 0.0,
+            "travel_seconds": 47.023268970606324,
+            "arrival_time": 47.023268970606324,
+            "completion_time": 62.023268970606324,
+            "on_time": true
+          },
+          {
+            "row": 1,
+            "responder_id": "R10",
+            "incident_id": "I3",
+            "departure_time": 0.0,
+            "travel_seconds": 0.0,
+            "arrival_time": 0.0,
+            "completion_time": 10.0,
+            "on_time": true
+          },
+          {
+            "row": 2,
+            "responder_id": "R4",
+            "incident_id": "I5",
+            "departure_time": 0.0,
+            "travel_seconds": 36.23687943262412,
+            "arrival_time": 36.23687943262412,
+            "completion_time": 66.23687943262412,
+            "on_time": true
+          },
+          {
+            "row": 3,
+            "responder_id": "R6",
+            "incident_id": "I6",
+            "departure_time": 0.0,
+            "travel_seconds": 34.52997762863536,
+            "arrival_time": 34.52997762863536,
+            "completion_time": 79.52997762863535,
+            "on_time": true
+          },
+          {
+            "row": 4,
+            "responder_id": "R8",
+            "incident_id": "I4",
+            "departure_time": 0.0,
+            "travel_seconds": 35.452096477947066,
+            "arrival_time": 35.452096477947066,
+            "completion_time": 70.45209647794707,
+            "on_time": true
+          },
+          {
+            "row": 5,
+            "responder_id": "R3",
+            "incident_id": "I7",
+            "departure_time": 10.0,
+            "travel_seconds": 66.8311724423631,
+            "arrival_time": 76.8311724423631,
+            "completion_time": 96.8311724423631,
+            "on_time": true
+          },
+          {
+            "row": 6,
+            "responder_id": "R7",
+            "incident_id": "I8",
+            "departure_time": 20.0,
+            "travel_seconds": 32.47117162245574,
+            "arrival_time": 52.47117162245574,
+            "completion_time": 87.47117162245574,
+            "on_time": true
+          },
+          {
+            "row": 7,
+            "responder_id": "R5",
+            "incident_id": "I10",
+            "departure_time": 40.0,
+            "travel_seconds": 44.65040152073555,
+            "arrival_time": 84.65040152073556,
+            "completion_time": 124.65040152073556,
+            "on_time": true
+          },
+          {
+            "row": 8,
+            "responder_id": "R10",
+            "incident_id": "I11",
+            "departure_time": 50.0,
+            "travel_seconds": 7.691522157996147,
+            "arrival_time": 57.69152215799615,
+            "completion_time": 82.69152215799615,
+            "on_time": true
+          },
+          {
+            "row": 9,
+            "responder_id": "R1",
+            "incident_id": "I9",
+            "departure_time": 62.023268970606324,
+            "travel_seconds": 9.347591522157996,
+            "arrival_time": 71.37086049276432,
+            "completion_time": 91.37086049276432,
+            "on_time": true
+          },
+          {
+            "row": 10,
+            "responder_id": "R6",
+            "incident_id": "I12",
+            "departure_time": 79.52997762863535,
+            "travel_seconds": 0.0,
+            "arrival_time": 79.52997762863535,
+            "completion_time": 114.52997762863535,
+            "on_time": true
+          }
+        ],
+        "unhandled_incident_ids": [
+          "I2"
+        ],
+        "statistics": {
+          "total_incidents": 12,
+          "handled": 11,
+          "deadlines_met": 11,
+          "unhandled": 1,
+          "responders_used": 8,
+          "average_response_seconds": 33.253393488614826,
+          "deadlines_met_percent_all": 91.66666666666667,
+          "deadlines_met_percent_handled": 100.0,
+          "handled_by_priority": {
+            "Critical": 6,
+            "High": 4,
+            "Medium": 1,
+            "Low": 0
+          }
+        }
+      }
+    },
+    {
+      "scenario": "Scenario2",
+      "deadline_policy": "allow_late",
+      "plan": "results/plans/Scenario2/allow_late/plan.json",
+      "statistics_file": "results/plans/Scenario2/allow_late/statistics.txt",
+      "file_matches_simulation": true,
+      "unchanged_from_previous_hmm_benchmark": true,
+      "standalone_validator_exit_code": 0,
+      "validation": {
+        "valid": true,
+        "strict_deadlines": false,
+        "deadline_compliant": false,
+        "errors": [],
+        "warnings": [
+          {
+            "row": 5,
+            "code": "deadline",
+            "message": "Estimated arrival exceeds absolute arrival deadline"
+          },
+          {
+            "row": 8,
+            "code": "deadline",
+            "message": "Estimated arrival exceeds absolute arrival deadline"
+          }
+        ],
+        "assignments": [
+          {
+            "row": 0,
+            "responder_id": "R1",
+            "incident_id": "I1",
+            "departure_time": 0.0,
+            "travel_seconds": 47.023268970606324,
+            "arrival_time": 47.023268970606324,
+            "completion_time": 62.023268970606324,
+            "on_time": true
+          },
+          {
+            "row": 1,
+            "responder_id": "R10",
+            "incident_id": "I3",
+            "departure_time": 0.0,
+            "travel_seconds": 0.0,
+            "arrival_time": 0.0,
+            "completion_time": 10.0,
+            "on_time": true
+          },
+          {
+            "row": 2,
+            "responder_id": "R4",
+            "incident_id": "I5",
+            "departure_time": 0.0,
+            "travel_seconds": 36.23687943262412,
+            "arrival_time": 36.23687943262412,
+            "completion_time": 66.23687943262412,
+            "on_time": true
+          },
+          {
+            "row": 3,
+            "responder_id": "R6",
+            "incident_id": "I6",
+            "departure_time": 0.0,
+            "travel_seconds": 34.52997762863536,
+            "arrival_time": 34.52997762863536,
+            "completion_time": 79.52997762863535,
+            "on_time": true
+          },
+          {
+            "row": 4,
+            "responder_id": "R8",
+            "incident_id": "I4",
+            "departure_time": 0.0,
+            "travel_seconds": 35.452096477947066,
+            "arrival_time": 35.452096477947066,
+            "completion_time": 70.45209647794707,
+            "on_time": true
+          },
+          {
+            "row": 5,
+            "responder_id": "R10",
+            "incident_id": "I2",
+            "departure_time": 10.0,
+            "travel_seconds": 10.782851637764933,
+            "arrival_time": 20.782851637764935,
+            "completion_time": 40.782851637764935,
+            "on_time": false
+          },
+          {
+            "row": 6,
+            "responder_id": "R3",
+            "incident_id": "I7",
+            "departure_time": 10.0,
+            "travel_seconds": 66.8311724423631,
+            "arrival_time": 76.8311724423631,
+            "completion_time": 96.8311724423631,
+            "on_time": true
+          },
+          {
+            "row": 7,
+            "responder_id": "R7",
+            "incident_id": "I8",
+            "departure_time": 20.0,
+            "travel_seconds": 32.47117162245574,
+            "arrival_time": 52.47117162245574,
+            "completion_time": 87.47117162245574,
+            "on_time": true
+          },
+          {
+            "row": 8,
+            "responder_id": "R2",
+            "incident_id": "I9",
+            "departure_time": 30.0,
+            "travel_seconds": 45.20226680267482,
+            "arrival_time": 75.20226680267481,
+            "completion_time": 95.20226680267481,
+            "on_time": false
+          },
+          {
+            "row": 9,
+            "responder_id": "R5",
+            "incident_id": "I10",
+            "departure_time": 40.0,
+            "travel_seconds": 44.65040152073555,
+            "arrival_time": 84.65040152073556,
+            "completion_time": 124.65040152073556,
+            "on_time": true
+          },
+          {
+            "row": 10,
+            "responder_id": "R10",
+            "incident_id": "I11",
+            "departure_time": 50.0,
+            "travel_seconds": 10.672447013487476,
+            "arrival_time": 60.67244701348748,
+            "completion_time": 85.67244701348747,
+            "on_time": true
+          },
+          {
+            "row": 11,
+            "responder_id": "R6",
+            "incident_id": "I12",
+            "departure_time": 79.52997762863535,
+            "travel_seconds": 0.0,
+            "arrival_time": 79.52997762863535,
+            "completion_time": 114.52997762863535,
+            "on_time": true
+          }
+        ],
+        "unhandled_incident_ids": [],
+        "statistics": {
+          "total_incidents": 12,
+          "handled": 12,
+          "deadlines_met": 10,
+          "unhandled": 0,
+          "responders_used": 9,
+          "average_response_seconds": 32.78187593149415,
+          "deadlines_met_percent_all": 83.33333333333333,
+          "deadlines_met_percent_handled": 83.33333333333333,
+          "handled_by_priority": {
+            "Critical": 6,
+            "High": 5,
+            "Medium": 1,
+            "Low": 0
+          }
+        }
+      }
+    },
+    {
+      "scenario": "Scenario3",
+      "deadline_policy": "strict",
+      "plan": "results/plans/Scenario3/strict/plan.json",
+      "statistics_file": "results/plans/Scenario3/strict/statistics.txt",
+      "file_matches_simulation": true,
+      "unchanged_from_previous_hmm_benchmark": true,
+      "standalone_validator_exit_code": 0,
+      "validation": {
+        "valid": true,
+        "strict_deadlines": true,
+        "deadline_compliant": true,
+        "errors": [],
+        "warnings": [],
+        "assignments": [
+          {
+            "row": 0,
+            "responder_id": "R2",
+            "incident_id": "I4",
+            "departure_time": 0.0,
+            "travel_seconds": 590.9313725490196,
+            "arrival_time": 590.9313725490196,
+            "completion_time": 620.9313725490196,
+            "on_time": true
+          },
+          {
+            "row": 1,
+            "responder_id": "R3",
+            "incident_id": "I1",
+            "departure_time": 0.0,
+            "travel_seconds": 596.6861385016434,
+            "arrival_time": 596.6861385016434,
+            "completion_time": 611.6861385016434,
+            "on_time": true
+          },
+          {
+            "row": 2,
+            "responder_id": "R9",
+            "incident_id": "I2",
+            "departure_time": 0.0,
+            "travel_seconds": 642.702119460501,
+            "arrival_time": 642.702119460501,
+            "completion_time": 662.702119460501,
+            "on_time": true
+          },
+          {
+            "row": 3,
+            "responder_id": "R4",
+            "incident_id": "I7",
+            "departure_time": 120.0,
+            "travel_seconds": 854.098357709069,
+            "arrival_time": 974.098357709069,
+            "completion_time": 994.098357709069,
+            "on_time": true
+          },
+          {
+            "row": 4,
+            "responder_id": "R5",
+            "incident_id": "I8",
+            "departure_time": 360.0,
+            "travel_seconds": 600.6093403680284,
+            "arrival_time": 960.6093403680284,
+            "completion_time": 1000.6093403680284,
+            "on_time": true
+          },
+          {
+            "row": 5,
+            "responder_id": "R9",
+            "incident_id": "I9",
+            "departure_time": 662.702119460501,
+            "travel_seconds": 1232.7044315992293,
+            "arrival_time": 1895.4065510597302,
+            "completion_time": 1920.4065510597302,
+            "on_time": true
+          },
+          {
+            "row": 6,
+            "responder_id": "R5",
+            "incident_id": "I10",
+            "departure_time": 1140.0,
+            "travel_seconds": 600.6093403680284,
+            "arrival_time": 1740.6093403680284,
+            "completion_time": 1775.6093403680284,
+            "on_time": true
+          },
+          {
+            "row": 7,
+            "responder_id": "R10",
+            "incident_id": "I12",
+            "departure_time": 1500.0,
+            "travel_seconds": 402.314450867052,
+            "arrival_time": 1902.314450867052,
+            "completion_time": 1922.314450867052,
+            "on_time": true
+          },
+          {
+            "row": 8,
+            "responder_id": "R7",
+            "incident_id": "I13",
+            "departure_time": 2750.0,
+            "travel_seconds": 976.749710982659,
+            "arrival_time": 3726.749710982659,
+            "completion_time": 3756.749710982659,
+            "on_time": true
+          },
+          {
+            "row": 9,
+            "responder_id": "R5",
+            "incident_id": "I16",
+            "departure_time": 4200.0,
+            "travel_seconds": 752.1358494843024,
+            "arrival_time": 4952.1358494843025,
+            "completion_time": 4982.1358494843025,
+            "on_time": true
+          },
+          {
+            "row": 10,
+            "responder_id": "R3",
+            "incident_id": "I18",
+            "departure_time": 4600.0,
+            "travel_seconds": 0.0,
+            "arrival_time": 4600.0,
+            "completion_time": 4620.0,
+            "on_time": true
+          },
+          {
+            "row": 11,
+            "responder_id": "R1",
+            "incident_id": "I20",
+            "departure_time": 5000.0,
+            "travel_seconds": 590.9313725490196,
+            "arrival_time": 5590.931372549019,
+            "completion_time": 5610.931372549019,
+            "on_time": true
+          },
+          {
+            "row": 12,
+            "responder_id": "R9",
+            "incident_id": "I19",
+            "departure_time": 5000.0,
+            "travel_seconds": 0.0,
+            "arrival_time": 5000.0,
+            "completion_time": 5025.0,
+            "on_time": true
+          }
+        ],
+        "unhandled_incident_ids": [
+          "I11",
+          "I14",
+          "I15",
+          "I17",
+          "I3",
+          "I5",
+          "I6"
+        ],
+        "statistics": {
+          "total_incidents": 20,
+          "handled": 13,
+          "deadlines_met": 13,
+          "unhandled": 7,
+          "responders_used": 8,
+          "average_response_seconds": 607.9365079922349,
+          "deadlines_met_percent_all": 65.0,
+          "deadlines_met_percent_handled": 100.0,
+          "handled_by_priority": {
+            "Critical": 3,
+            "High": 7,
+            "Medium": 3,
+            "Low": 0
+          }
+        }
+      }
+    },
+    {
+      "scenario": "Scenario3",
+      "deadline_policy": "allow_late",
+      "plan": "results/plans/Scenario3/allow_late/plan.json",
+      "statistics_file": "results/plans/Scenario3/allow_late/statistics.txt",
+      "file_matches_simulation": true,
+      "unchanged_from_previous_hmm_benchmark": true,
+      "standalone_validator_exit_code": 0,
+      "validation": {
+        "valid": true,
+        "strict_deadlines": false,
+        "deadline_compliant": false,
+        "errors": [],
+        "warnings": [
+          {
+            "row": 2,
+            "code": "deadline",
+            "message": "Estimated arrival exceeds absolute arrival deadline"
+          },
+          {
+            "row": 3,
+            "code": "deadline",
+            "message": "Estimated arrival exceeds absolute arrival deadline"
+          },
+          {
+            "row": 5,
+            "code": "deadline",
+            "message": "Estimated arrival exceeds absolute arrival deadline"
+          },
+          {
+            "row": 7,
+            "code": "deadline",
+            "message": "Estimated arrival exceeds absolute arrival deadline"
+          },
+          {
+            "row": 8,
+            "code": "deadline",
+            "message": "Estimated arrival exceeds absolute arrival deadline"
+          },
+          {
+            "row": 9,
+            "code": "deadline",
+            "message": "Estimated arrival exceeds absolute arrival deadline"
+          },
+          {
+            "row": 12,
+            "code": "deadline",
+            "message": "Estimated arrival exceeds absolute arrival deadline"
+          },
+          {
+            "row": 14,
+            "code": "deadline",
+            "message": "Estimated arrival exceeds absolute arrival deadline"
+          },
+          {
+            "row": 19,
+            "code": "deadline",
+            "message": "Estimated arrival exceeds absolute arrival deadline"
+          }
+        ],
+        "assignments": [
+          {
+            "row": 0,
+            "responder_id": "R2",
+            "incident_id": "I4",
+            "departure_time": 0.0,
+            "travel_seconds": 590.9313725490196,
+            "arrival_time": 590.9313725490196,
+            "completion_time": 620.9313725490196,
+            "on_time": true
+          },
+          {
+            "row": 1,
+            "responder_id": "R3",
+            "incident_id": "I1",
+            "departure_time": 0.0,
+            "travel_seconds": 596.6861385016434,
+            "arrival_time": 596.6861385016434,
+            "completion_time": 611.6861385016434,
+            "on_time": true
+          },
+          {
+            "row": 2,
+            "responder_id": "R5",
+            "incident_id": "I3",
+            "departure_time": 0.0,
+            "travel_seconds": 1922.483192799174,
+            "arrival_time": 1922.483192799174,
+            "completion_time": 1957.483192799174,
+            "on_time": false
+          },
+          {
+            "row": 3,
+            "responder_id": "R8",
+            "incident_id": "I5",
+            "departure_time": 0.0,
+            "travel_seconds": 1439.1610789980732,
+            "arrival_time": 1439.1610789980732,
+            "completion_time": 1484.1610789980732,
+            "on_time": false
+          },
+          {
+            "row": 4,
+            "responder_id": "R9",
+            "incident_id": "I2",
+            "departure_time": 0.0,
+            "travel_seconds": 642.702119460501,
+            "arrival_time": 642.702119460501,
+            "completion_time": 662.702119460501,
+            "on_time": true
+          },
+          {
+            "row": 5,
+            "responder_id": "R7",
+            "incident_id": "I6",
+            "departure_time": 60.0,
+            "travel_seconds": 4561.793902300805,
+            "arrival_time": 4621.793902300805,
+            "completion_time": 4656.793902300805,
+            "on_time": false
+          },
+          {
+            "row": 6,
+            "responder_id": "R4",
+            "incident_id": "I7",
+            "departure_time": 120.0,
+            "travel_seconds": 854.098357709069,
+            "arrival_time": 974.098357709069,
+            "completion_time": 994.098357709069,
+            "on_time": true
+          },
+          {
+            "row": 7,
+            "responder_id": "R6",
+            "incident_id": "I8",
+            "departure_time": 360.0,
+            "travel_seconds": 2820.147105300591,
+            "arrival_time": 3180.147105300591,
+            "completion_time": 3220.147105300591,
+            "on_time": false
+          },
+          {
+            "row": 8,
+            "responder_id": "R10",
+            "incident_id": "I9",
+            "departure_time": 600.0,
+            "travel_seconds": 2116.4425932222603,
+            "arrival_time": 2716.4425932222603,
+            "completion_time": 2741.4425932222603,
+            "on_time": false
+          },
+          {
+            "row": 9,
+            "responder_id": "R1",
+            "incident_id": "I11",
+            "departure_time": 1140.0,
+            "travel_seconds": 590.9313725490196,
+            "arrival_time": 1730.9313725490197,
+            "completion_time": 1750.9313725490197,
+            "on_time": false
+          },
+          {
+            "row": 10,
+            "responder_id": "R8",
+            "incident_id": "I10",
+            "departure_time": 1484.1610789980732,
+            "travel_seconds": 0.0,
+            "arrival_time": 1484.1610789980732,
+            "completion_time": 1519.1610789980732,
+            "on_time": true
+          },
+          {
+            "row": 11,
+            "responder_id": "R9",
+            "incident_id": "I12",
+            "departure_time": 1500.0,
+            "travel_seconds": 1225.8001070434598,
+            "arrival_time": 2725.80010704346,
+            "completion_time": 2745.80010704346,
+            "on_time": true
+          },
+          {
+            "row": 12,
+            "responder_id": "R5",
+            "incident_id": "I13",
+            "departure_time": 2750.0,
+            "travel_seconds": 3532.8880249852027,
+            "arrival_time": 6282.888024985203,
+            "completion_time": 6312.888024985203,
+            "on_time": false
+          },
+          {
+            "row": 13,
+            "responder_id": "R1",
+            "incident_id": "I14",
+            "departure_time": 3000.0,
+            "travel_seconds": 740.6392054932693,
+            "arrival_time": 3740.6392054932694,
+            "completion_time": 3760.6392054932694,
+            "on_time": true
+          },
+          {
+            "row": 14,
+            "responder_id": "R10",
+            "incident_id": "I15",
+            "departure_time": 3250.0,
+            "travel_seconds": 2173.24071177604,
+            "arrival_time": 5423.2407117760395,
+            "completion_time": 5443.2407117760395,
+            "on_time": false
+          },
+          {
+            "row": 15,
+            "responder_id": "R8",
+            "incident_id": "I16",
+            "departure_time": 4200.0,
+            "travel_seconds": 752.1358494843024,
+            "arrival_time": 4952.1358494843025,
+            "completion_time": 4982.1358494843025,
+            "on_time": true
+          },
+          {
+            "row": 16,
+            "responder_id": "R6",
+            "incident_id": "I17",
+            "departure_time": 4500.0,
+            "travel_seconds": 0.0,
+            "arrival_time": 4500.0,
+            "completion_time": 4535.0,
+            "on_time": true
+          },
+          {
+            "row": 17,
+            "responder_id": "R3",
+            "incident_id": "I18",
+            "departure_time": 4600.0,
+            "travel_seconds": 0.0,
+            "arrival_time": 4600.0,
+            "completion_time": 4620.0,
+            "on_time": true
+          },
+          {
+            "row": 18,
+            "responder_id": "R1",
+            "incident_id": "I20",
+            "departure_time": 5000.0,
+            "travel_seconds": 740.6392054932693,
+            "arrival_time": 5740.639205493269,
+            "completion_time": 5760.639205493269,
+            "on_time": true
+          },
+          {
+            "row": 19,
+            "responder_id": "R9",
+            "incident_id": "I19",
+            "departure_time": 5000.0,
+            "travel_seconds": 2518.7570440893123,
+            "arrival_time": 7518.757044089312,
+            "completion_time": 7543.757044089312,
+            "on_time": false
+          }
+        ],
+        "unhandled_incident_ids": [],
+        "statistics": {
+          "total_incidents": 20,
+          "handled": 20,
+          "deadlines_met": 11,
+          "unhandled": 0,
+          "responders_used": 10,
+          "average_response_seconds": 1408.1819230376543,
+          "deadlines_met_percent_all": 55.0,
+          "deadlines_met_percent_handled": 55.0,
+          "handled_by_priority": {
+            "Critical": 8,
+            "High": 8,
+            "Medium": 4,
+            "Low": 0
+          }
+        }
+      }
+    }
+  ]
+}

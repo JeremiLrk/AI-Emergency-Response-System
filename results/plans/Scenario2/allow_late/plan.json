@@ -1,0 +1,115 @@
+[
+  {
+    "responder_id": "R1",
+    "incident_id": "I1",
+    "path": [
+      "H1",
+      "N4",
+      "N1"
+    ],
+    "time": 0.0
+  },
+  {
+    "responder_id": "R10",
+    "incident_id": "I3",
+    "path": [
+      "N2"
+    ],
+    "time": 0.0
+  },
+  {
+    "responder_id": "R4",
+    "incident_id": "I5",
+    "path": [
+      "H2",
+      "N8"
+    ],
+    "time": 0.0
+  },
+  {
+    "responder_id": "R6",
+    "incident_id": "I6",
+    "path": [
+      "N6",
+      "N5"
+    ],
+    "time": 0.0
+  },
+  {
+    "responder_id": "R8",
+    "incident_id": "I4",
+    "path": [
+      "N10",
+      "N9",
+      "N7"
+    ],
+    "time": 0.0
+  },
+  {
+    "responder_id": "R10",
+    "incident_id": "I2",
+    "path": [
+      "N2",
+      "N7"
+    ],
+    "time": 10.0
+  },
+  {
+    "responder_id": "R3",
+    "incident_id": "I7",
+    "path": [
+      "H2",
+      "N8",
+      "N9",
+      "N10"
+    ],
+    "time": 10.0
+  },
+  {
+    "responder_id": "R7",
+    "incident_id": "I8",
+    "path": [
+      "N10",
+      "N9",
+      "N2"
+    ],
+    "time": 20.0
+  },
+  {
+    "responder_id": "R2",
+    "incident_id": "I9",
+    "path": [
+      "H1",
+      "N3",
+      "N5"
+    ],
+    "time": 30.0
+  },
+  {
+    "responder_id": "R5",
+    "incident_id": "I10",
+    "path": [
+      "N6",
+      "N5",
+      "N4"
+    ],
+    "time": 40.0
+  },
+  {
+    "responder_id": "R10",
+    "incident_id": "I11",
+    "path": [
+      "N7",
+      "N9"
+    ],
+    "time": 50.0
+  },
+  {
+    "responder_id": "R6",
+    "incident_id": "I12",
+    "path": [
+      "N5"
+    ],
+    "time": 79.52997762863535
+  }
+]

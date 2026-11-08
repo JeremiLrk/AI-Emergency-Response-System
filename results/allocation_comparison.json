@@ -1,0 +1,2938 @@
+{
+  "ortools_version": "9.15.6755",
+  "python_version": "3.12.14",
+  "routing_policy": "bayesian",
+  "block_threshold": 0.2,
+  "solver_time_limit_seconds": 2.0,
+  "solver_workers": 1,
+  "solver_seed": 0,
+  "response_scale": 1000,
+  "execution": "fixed modeled route estimates; no HMM/hidden road truth",
+  "comparisons": [
+    {
+      "scenario": "Scenario1",
+      "deadline_policy": "strict",
+      "allocator": "csp",
+      "statistics": {
+        "total_incidents": 7,
+        "handled": 6,
+        "deadlines_met": 6,
+        "unhandled": 1,
+        "responders_used": 4,
+        "average_response_seconds": 91.11341222879685,
+        "deadlines_met_percent_all": 85.71428571428571,
+        "deadlines_met_percent_handled": 100.0,
+        "handled_by_priority": {
+          "Critical": 2,
+          "High": 4,
+          "Medium": 0,
+          "Low": 0
+        }
+      },
+      "solver_decisions": 17,
+      "unproven_decisions": 0,
+      "solver_statuses": [
+        "NO_CANDIDATES",
+        "OPTIMAL"
+      ],
+      "assignments": [
+        {
+          "responder_id": "R1",
+          "incident_id": "I2",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N1",
+              "H1",
+              "N2"
+            ],
+            "roads": [
+              "N1->H1",
+              "H1->N2"
+            ],
+            "seconds": 86.77803468208094
+          },
+          "arrival_time": 86.77803468208094,
+          "completion_time": 116.77803468208094
+        },
+        {
+          "responder_id": "R2",
+          "incident_id": "I4",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N2"
+            ],
+            "roads": [
+              "H1->N2"
+            ],
+            "seconds": 53.067822736030834
+          },
+          "arrival_time": 53.067822736030834,
+          "completion_time": 63.067822736030834
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I3",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N2",
+              "H1",
+              "N4",
+              "N3"
+            ],
+            "roads": [
+              "N2->H1",
+              "H1->N4",
+              "N4->N3"
+            ],
+            "seconds": 122.54913294797689
+          },
+          "arrival_time": 122.54913294797689,
+          "completion_time": 142.5491329479769
+        },
+        {
+          "responder_id": "R4",
+          "incident_id": "I1",
+          "departure_time": 10.0,
+          "route": {
+            "nodes": [
+              "N3",
+              "N4"
+            ],
+            "roads": [
+              "N3->N4"
+            ],
+            "seconds": 56.96878612716763
+          },
+          "arrival_time": 66.96878612716763,
+          "completion_time": 76.96878612716763
+        },
+        {
+          "responder_id": "R4",
+          "incident_id": "I6",
+          "departure_time": 76.96878612716763,
+          "route": {
+            "nodes": [
+              "N4",
+              "H1",
+              "N1"
+            ],
+            "roads": [
+              "N4->H1",
+              "H1->N1"
+            ],
+            "seconds": 46.22273603082852
+          },
+          "arrival_time": 123.19152215799616,
+          "completion_time": 133.19152215799616
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I5",
+          "departure_time": 116.77803468208094,
+          "route": {
+            "nodes": [
+              "N2",
+              "N1"
+            ],
+            "roads": [
+              "N2->N1"
+            ],
+            "seconds": 77.34714003944772
+          },
+          "arrival_time": 194.12517472152865,
+          "completion_time": 214.12517472152865
+        }
+      ]
+    },
+    {
+      "scenario": "Scenario1",
+      "deadline_policy": "strict",
+      "allocator": "nearest",
+      "statistics": {
+        "total_incidents": 7,
+        "handled": 5,
+        "deadlines_met": 5,
+        "unhandled": 2,
+        "responders_used": 3,
+        "average_response_seconds": 82.43752049343868,
+        "deadlines_met_percent_all": 71.42857142857143,
+        "deadlines_met_percent_handled": 100.0,
+        "handled_by_priority": {
+          "Critical": 1,
+          "High": 4,
+          "Medium": 0,
+          "Low": 0
+        }
+      },
+      "solver_decisions": 0,
+      "unproven_decisions": 0,
+      "solver_statuses": [],
+      "assignments": [
+        {
+          "responder_id": "R2",
+          "incident_id": "I1",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N4"
+            ],
+            "roads": [
+              "H1->N4"
+            ],
+            "seconds": 12.512524084778422
+          },
+          "arrival_time": 12.512524084778422,
+          "completion_time": 22.51252408477842
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I2",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N1",
+              "H1",
+              "N2"
+            ],
+            "roads": [
+              "N1->H1",
+              "H1->N2"
+            ],
+            "seconds": 86.77803468208094
+          },
+          "arrival_time": 86.77803468208094,
+          "completion_time": 116.77803468208094
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I3",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N2",
+              "H1",
+              "N4",
+              "N3"
+            ],
+            "roads": [
+              "N2->H1",
+              "H1->N4",
+              "N4->N3"
+            ],
+            "seconds": 122.54913294797689
+          },
+          "arrival_time": 122.54913294797689,
+          "completion_time": 142.5491329479769
+        },
+        {
+          "responder_id": "R2",
+          "incident_id": "I6",
+          "departure_time": 50.0,
+          "route": {
+            "nodes": [
+              "N4",
+              "H1",
+              "N1"
+            ],
+            "roads": [
+              "N4->H1",
+              "H1->N1"
+            ],
+            "seconds": 46.22273603082852
+          },
+          "arrival_time": 96.22273603082851,
+          "completion_time": 106.22273603082851
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I5",
+          "departure_time": 116.77803468208094,
+          "route": {
+            "nodes": [
+              "N2",
+              "N1"
+            ],
+            "roads": [
+              "N2->N1"
+            ],
+            "seconds": 77.34714003944772
+          },
+          "arrival_time": 194.12517472152865,
+          "completion_time": 214.12517472152865
+        }
+      ]
+    },
+    {
+      "scenario": "Scenario1",
+      "deadline_policy": "allow_late",
+      "allocator": "csp",
+      "statistics": {
+        "total_incidents": 7,
+        "handled": 7,
+        "deadlines_met": 5,
+        "unhandled": 0,
+        "responders_used": 4,
+        "average_response_seconds": 102.27633673574091,
+        "deadlines_met_percent_all": 71.42857142857143,
+        "deadlines_met_percent_handled": 71.42857142857143,
+        "handled_by_priority": {
+          "Critical": 2,
+          "High": 5,
+          "Medium": 0,
+          "Low": 0
+        }
+      },
+      "solver_decisions": 20,
+      "unproven_decisions": 0,
+      "solver_statuses": [
+        "NO_CANDIDATES",
+        "OPTIMAL"
+      ],
+      "assignments": [
+        {
+          "responder_id": "R1",
+          "incident_id": "I2",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N1",
+              "H1",
+              "N2"
+            ],
+            "roads": [
+              "N1->H1",
+              "H1->N2"
+            ],
+            "seconds": 86.77803468208094
+          },
+          "arrival_time": 86.77803468208094,
+          "completion_time": 116.77803468208094
+        },
+        {
+          "responder_id": "R2",
+          "incident_id": "I4",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N2"
+            ],
+            "roads": [
+              "H1->N2"
+            ],
+            "seconds": 53.067822736030834
+          },
+          "arrival_time": 53.067822736030834,
+          "completion_time": 63.067822736030834
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I3",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N2",
+              "H1",
+              "N4",
+              "N3"
+            ],
+            "roads": [
+              "N2->H1",
+              "H1->N4",
+              "N4->N3"
+            ],
+            "seconds": 122.54913294797689
+          },
+          "arrival_time": 122.54913294797689,
+          "completion_time": 142.5491329479769
+        },
+        {
+          "responder_id": "R4",
+          "incident_id": "I1",
+          "departure_time": 10.0,
+          "route": {
+            "nodes": [
+              "N3",
+              "N4"
+            ],
+            "roads": [
+              "N3->N4"
+            ],
+            "seconds": 56.96878612716763
+          },
+          "arrival_time": 66.96878612716763,
+          "completion_time": 76.96878612716763
+        },
+        {
+          "responder_id": "R2",
+          "incident_id": "I6",
+          "departure_time": 63.067822736030834,
+          "route": {
+            "nodes": [
+              "N2",
+              "N1"
+            ],
+            "roads": [
+              "N2->N1"
+            ],
+            "seconds": 77.34714003944772
+          },
+          "arrival_time": 140.41496277547856,
+          "completion_time": 150.41496277547856
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I5",
+          "departure_time": 116.77803468208094,
+          "route": {
+            "nodes": [
+              "N2",
+              "N1"
+            ],
+            "roads": [
+              "N2->N1"
+            ],
+            "seconds": 77.34714003944772
+          },
+          "arrival_time": 194.12517472152865,
+          "completion_time": 214.12517472152865
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I7",
+          "departure_time": 142.5491329479769,
+          "route": {
+            "nodes": [
+              "N3",
+              "N4",
+              "H1"
+            ],
+            "roads": [
+              "N3->N4",
+              "N4->H1"
+            ],
+            "seconds": 69.48131021194605
+          },
+          "arrival_time": 212.03044315992292,
+          "completion_time": 262.0304431599229
+        }
+      ]
+    },
+    {
+      "scenario": "Scenario1",
+      "deadline_policy": "allow_late",
+      "allocator": "nearest",
+      "statistics": {
+        "total_incidents": 7,
+        "handled": 7,
+        "deadlines_met": 5,
+        "unhandled": 0,
+        "responders_used": 4,
+        "average_response_seconds": 98.9379328541623,
+        "deadlines_met_percent_all": 71.42857142857143,
+        "deadlines_met_percent_handled": 71.42857142857143,
+        "handled_by_priority": {
+          "Critical": 2,
+          "High": 5,
+          "Medium": 0,
+          "Low": 0
+        }
+      },
+      "solver_decisions": 0,
+      "unproven_decisions": 0,
+      "solver_statuses": [],
+      "assignments": [
+        {
+          "responder_id": "R2",
+          "incident_id": "I1",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N4"
+            ],
+            "roads": [
+              "H1->N4"
+            ],
+            "seconds": 12.512524084778422
+          },
+          "arrival_time": 12.512524084778422,
+          "completion_time": 22.51252408477842
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I2",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N1",
+              "H1",
+              "N2"
+            ],
+            "roads": [
+              "N1->H1",
+              "H1->N2"
+            ],
+            "seconds": 86.77803468208094
+          },
+          "arrival_time": 86.77803468208094,
+          "completion_time": 116.77803468208094
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I3",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N2",
+              "H1",
+              "N4",
+              "N3"
+            ],
+            "roads": [
+              "N2->H1",
+              "H1->N4",
+              "N4->N3"
+            ],
+            "seconds": 122.54913294797689
+          },
+          "arrival_time": 122.54913294797689,
+          "completion_time": 142.5491329479769
+        },
+        {
+          "responder_id": "R4",
+          "incident_id": "I4",
+          "departure_time": 10.0,
+          "route": {
+            "nodes": [
+              "N3",
+              "N4",
+              "N2"
+            ],
+            "roads": [
+              "N3->N4",
+              "N4->N2"
+            ],
+            "seconds": 118.3474843520197
+          },
+          "arrival_time": 128.3474843520197,
+          "completion_time": 138.3474843520197
+        },
+        {
+          "responder_id": "R2",
+          "incident_id": "I6",
+          "departure_time": 50.0,
+          "route": {
+            "nodes": [
+              "N4",
+              "H1",
+              "N1"
+            ],
+            "roads": [
+              "N4->H1",
+              "H1->N1"
+            ],
+            "seconds": 46.22273603082852
+          },
+          "arrival_time": 96.22273603082851,
+          "completion_time": 106.22273603082851
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I5",
+          "departure_time": 116.77803468208094,
+          "route": {
+            "nodes": [
+              "N2",
+              "N1"
+            ],
+            "roads": [
+              "N2->N1"
+            ],
+            "seconds": 77.34714003944772
+          },
+          "arrival_time": 194.12517472152865,
+          "completion_time": 214.12517472152865
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I7",
+          "departure_time": 142.5491329479769,
+          "route": {
+            "nodes": [
+              "N3",
+              "N4",
+              "H1"
+            ],
+            "roads": [
+              "N3->N4",
+              "N4->H1"
+            ],
+            "seconds": 69.48131021194605
+          },
+          "arrival_time": 212.03044315992292,
+          "completion_time": 262.0304431599229
+        }
+      ]
+    },
+    {
+      "scenario": "Scenario2",
+      "deadline_policy": "strict",
+      "allocator": "csp",
+      "statistics": {
+        "total_incidents": 12,
+        "handled": 11,
+        "deadlines_met": 11,
+        "unhandled": 1,
+        "responders_used": 8,
+        "average_response_seconds": 33.253393488614826,
+        "deadlines_met_percent_all": 91.66666666666667,
+        "deadlines_met_percent_handled": 100.0,
+        "handled_by_priority": {
+          "Critical": 6,
+          "High": 4,
+          "Medium": 1,
+          "Low": 0
+        }
+      },
+      "solver_decisions": 28,
+      "unproven_decisions": 0,
+      "solver_statuses": [
+        "NO_CANDIDATES",
+        "OPTIMAL"
+      ],
+      "assignments": [
+        {
+          "responder_id": "R1",
+          "incident_id": "I1",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N4",
+              "N1"
+            ],
+            "roads": [
+              "H1->N4",
+              "N4->N1"
+            ],
+            "seconds": 47.023268970606324
+          },
+          "arrival_time": 47.023268970606324,
+          "completion_time": 62.023268970606324
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I3",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N2"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 0.0,
+          "completion_time": 10.0
+        },
+        {
+          "responder_id": "R4",
+          "incident_id": "I5",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N8"
+            ],
+            "roads": [
+              "H2->N8"
+            ],
+            "seconds": 36.23687943262412
+          },
+          "arrival_time": 36.23687943262412,
+          "completion_time": 66.23687943262412
+        },
+        {
+          "responder_id": "R6",
+          "incident_id": "I6",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N6",
+              "N5"
+            ],
+            "roads": [
+              "N6->N5"
+            ],
+            "seconds": 34.52997762863536
+          },
+          "arrival_time": 34.52997762863536,
+          "completion_time": 79.52997762863535
+        },
+        {
+          "responder_id": "R8",
+          "incident_id": "I4",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N10",
+              "N9",
+              "N7"
+            ],
+            "roads": [
+              "N10->N9",
+              "N9->N7"
+            ],
+            "seconds": 35.452096477947066
+          },
+          "arrival_time": 35.452096477947066,
+          "completion_time": 70.45209647794707
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I7",
+          "departure_time": 10.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N8",
+              "N9",
+              "N10"
+            ],
+            "roads": [
+              "H2->N8",
+              "N8->N9",
+              "N9->N10"
+            ],
+            "seconds": 66.8311724423631
+          },
+          "arrival_time": 76.8311724423631,
+          "completion_time": 96.8311724423631
+        },
+        {
+          "responder_id": "R7",
+          "incident_id": "I8",
+          "departure_time": 20.0,
+          "route": {
+            "nodes": [
+              "N10",
+              "N9",
+              "N2"
+            ],
+            "roads": [
+              "N10->N9",
+              "N9->N2"
+            ],
+            "seconds": 32.47117162245574
+          },
+          "arrival_time": 52.47117162245574,
+          "completion_time": 87.47117162245574
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I10",
+          "departure_time": 40.0,
+          "route": {
+            "nodes": [
+              "N6",
+              "N5",
+              "N4"
+            ],
+            "roads": [
+              "N6->N5",
+              "N5->N4"
+            ],
+            "seconds": 44.65040152073555
+          },
+          "arrival_time": 84.65040152073556,
+          "completion_time": 124.65040152073556
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I11",
+          "departure_time": 50.0,
+          "route": {
+            "nodes": [
+              "N2",
+              "N9"
+            ],
+            "roads": [
+              "N2->N9"
+            ],
+            "seconds": 7.691522157996147
+          },
+          "arrival_time": 57.69152215799615,
+          "completion_time": 82.69152215799615
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I9",
+          "departure_time": 62.023268970606324,
+          "route": {
+            "nodes": [
+              "N1",
+              "N5"
+            ],
+            "roads": [
+              "N1->N5"
+            ],
+            "seconds": 9.347591522157996
+          },
+          "arrival_time": 71.37086049276432,
+          "completion_time": 91.37086049276432
+        },
+        {
+          "responder_id": "R6",
+          "incident_id": "I12",
+          "departure_time": 79.52997762863535,
+          "route": {
+            "nodes": [
+              "N5"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 79.52997762863535,
+          "completion_time": 114.52997762863535
+        }
+      ]
+    },
+    {
+      "scenario": "Scenario2",
+      "deadline_policy": "strict",
+      "allocator": "nearest",
+      "statistics": {
+        "total_incidents": 12,
+        "handled": 11,
+        "deadlines_met": 11,
+        "unhandled": 1,
+        "responders_used": 8,
+        "average_response_seconds": 33.253393488614826,
+        "deadlines_met_percent_all": 91.66666666666667,
+        "deadlines_met_percent_handled": 100.0,
+        "handled_by_priority": {
+          "Critical": 6,
+          "High": 4,
+          "Medium": 1,
+          "Low": 0
+        }
+      },
+      "solver_decisions": 0,
+      "unproven_decisions": 0,
+      "solver_statuses": [],
+      "assignments": [
+        {
+          "responder_id": "R10",
+          "incident_id": "I3",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N2"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 0.0,
+          "completion_time": 10.0
+        },
+        {
+          "responder_id": "R6",
+          "incident_id": "I6",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N6",
+              "N5"
+            ],
+            "roads": [
+              "N6->N5"
+            ],
+            "seconds": 34.52997762863536
+          },
+          "arrival_time": 34.52997762863536,
+          "completion_time": 79.52997762863535
+        },
+        {
+          "responder_id": "R7",
+          "incident_id": "I4",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N10",
+              "N9",
+              "N7"
+            ],
+            "roads": [
+              "N10->N9",
+              "N9->N7"
+            ],
+            "seconds": 35.452096477947066
+          },
+          "arrival_time": 35.452096477947066,
+          "completion_time": 70.45209647794707
+        },
+        {
+          "responder_id": "R4",
+          "incident_id": "I5",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N8"
+            ],
+            "roads": [
+              "H2->N8"
+            ],
+            "seconds": 36.23687943262412
+          },
+          "arrival_time": 36.23687943262412,
+          "completion_time": 66.23687943262412
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I1",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N4",
+              "N1"
+            ],
+            "roads": [
+              "H1->N4",
+              "N4->N1"
+            ],
+            "seconds": 47.023268970606324
+          },
+          "arrival_time": 47.023268970606324,
+          "completion_time": 62.023268970606324
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I7",
+          "departure_time": 10.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N8",
+              "N9",
+              "N10"
+            ],
+            "roads": [
+              "H2->N8",
+              "N8->N9",
+              "N9->N10"
+            ],
+            "seconds": 66.8311724423631
+          },
+          "arrival_time": 76.8311724423631,
+          "completion_time": 96.8311724423631
+        },
+        {
+          "responder_id": "R8",
+          "incident_id": "I8",
+          "departure_time": 20.0,
+          "route": {
+            "nodes": [
+              "N10",
+              "N9",
+              "N2"
+            ],
+            "roads": [
+              "N10->N9",
+              "N9->N2"
+            ],
+            "seconds": 32.47117162245574
+          },
+          "arrival_time": 52.47117162245574,
+          "completion_time": 87.47117162245574
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I10",
+          "departure_time": 40.0,
+          "route": {
+            "nodes": [
+              "N6",
+              "N5",
+              "N4"
+            ],
+            "roads": [
+              "N6->N5",
+              "N5->N4"
+            ],
+            "seconds": 44.65040152073555
+          },
+          "arrival_time": 84.65040152073556,
+          "completion_time": 124.65040152073556
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I11",
+          "departure_time": 50.0,
+          "route": {
+            "nodes": [
+              "N2",
+              "N9"
+            ],
+            "roads": [
+              "N2->N9"
+            ],
+            "seconds": 7.691522157996147
+          },
+          "arrival_time": 57.69152215799615,
+          "completion_time": 82.69152215799615
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I9",
+          "departure_time": 62.023268970606324,
+          "route": {
+            "nodes": [
+              "N1",
+              "N5"
+            ],
+            "roads": [
+              "N1->N5"
+            ],
+            "seconds": 9.347591522157996
+          },
+          "arrival_time": 71.37086049276432,
+          "completion_time": 91.37086049276432
+        },
+        {
+          "responder_id": "R6",
+          "incident_id": "I12",
+          "departure_time": 79.52997762863535,
+          "route": {
+            "nodes": [
+              "N5"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 79.52997762863535,
+          "completion_time": 114.52997762863535
+        }
+      ]
+    },
+    {
+      "scenario": "Scenario2",
+      "deadline_policy": "allow_late",
+      "allocator": "csp",
+      "statistics": {
+        "total_incidents": 12,
+        "handled": 12,
+        "deadlines_met": 10,
+        "unhandled": 0,
+        "responders_used": 9,
+        "average_response_seconds": 32.78187593149415,
+        "deadlines_met_percent_all": 83.33333333333333,
+        "deadlines_met_percent_handled": 83.33333333333333,
+        "handled_by_priority": {
+          "Critical": 6,
+          "High": 5,
+          "Medium": 1,
+          "Low": 0
+        }
+      },
+      "solver_decisions": 31,
+      "unproven_decisions": 0,
+      "solver_statuses": [
+        "NO_CANDIDATES",
+        "OPTIMAL"
+      ],
+      "assignments": [
+        {
+          "responder_id": "R1",
+          "incident_id": "I1",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N4",
+              "N1"
+            ],
+            "roads": [
+              "H1->N4",
+              "N4->N1"
+            ],
+            "seconds": 47.023268970606324
+          },
+          "arrival_time": 47.023268970606324,
+          "completion_time": 62.023268970606324
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I3",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N2"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 0.0,
+          "completion_time": 10.0
+        },
+        {
+          "responder_id": "R4",
+          "incident_id": "I5",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N8"
+            ],
+            "roads": [
+              "H2->N8"
+            ],
+            "seconds": 36.23687943262412
+          },
+          "arrival_time": 36.23687943262412,
+          "completion_time": 66.23687943262412
+        },
+        {
+          "responder_id": "R6",
+          "incident_id": "I6",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N6",
+              "N5"
+            ],
+            "roads": [
+              "N6->N5"
+            ],
+            "seconds": 34.52997762863536
+          },
+          "arrival_time": 34.52997762863536,
+          "completion_time": 79.52997762863535
+        },
+        {
+          "responder_id": "R8",
+          "incident_id": "I4",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N10",
+              "N9",
+              "N7"
+            ],
+            "roads": [
+              "N10->N9",
+              "N9->N7"
+            ],
+            "seconds": 35.452096477947066
+          },
+          "arrival_time": 35.452096477947066,
+          "completion_time": 70.45209647794707
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I2",
+          "departure_time": 10.0,
+          "route": {
+            "nodes": [
+              "N2",
+              "N7"
+            ],
+            "roads": [
+              "N2->N7"
+            ],
+            "seconds": 10.782851637764933
+          },
+          "arrival_time": 20.782851637764935,
+          "completion_time": 40.782851637764935
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I7",
+          "departure_time": 10.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N8",
+              "N9",
+              "N10"
+            ],
+            "roads": [
+              "H2->N8",
+              "N8->N9",
+              "N9->N10"
+            ],
+            "seconds": 66.8311724423631
+          },
+          "arrival_time": 76.8311724423631,
+          "completion_time": 96.8311724423631
+        },
+        {
+          "responder_id": "R7",
+          "incident_id": "I8",
+          "departure_time": 20.0,
+          "route": {
+            "nodes": [
+              "N10",
+              "N9",
+              "N2"
+            ],
+            "roads": [
+              "N10->N9",
+              "N9->N2"
+            ],
+            "seconds": 32.47117162245574
+          },
+          "arrival_time": 52.47117162245574,
+          "completion_time": 87.47117162245574
+        },
+        {
+          "responder_id": "R2",
+          "incident_id": "I9",
+          "departure_time": 30.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N3",
+              "N5"
+            ],
+            "roads": [
+              "H1->N3",
+              "N3->N5"
+            ],
+            "seconds": 45.20226680267482
+          },
+          "arrival_time": 75.20226680267481,
+          "completion_time": 95.20226680267481
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I10",
+          "departure_time": 40.0,
+          "route": {
+            "nodes": [
+              "N6",
+              "N5",
+              "N4"
+            ],
+            "roads": [
+              "N6->N5",
+              "N5->N4"
+            ],
+            "seconds": 44.65040152073555
+          },
+          "arrival_time": 84.65040152073556,
+          "completion_time": 124.65040152073556
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I11",
+          "departure_time": 50.0,
+          "route": {
+            "nodes": [
+              "N7",
+              "N9"
+            ],
+            "roads": [
+              "N7->N9"
+            ],
+            "seconds": 10.672447013487476
+          },
+          "arrival_time": 60.67244701348748,
+          "completion_time": 85.67244701348747
+        },
+        {
+          "responder_id": "R6",
+          "incident_id": "I12",
+          "departure_time": 79.52997762863535,
+          "route": {
+            "nodes": [
+              "N5"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 79.52997762863535,
+          "completion_time": 114.52997762863535
+        }
+      ]
+    },
+    {
+      "scenario": "Scenario2",
+      "deadline_policy": "allow_late",
+      "allocator": "nearest",
+      "statistics": {
+        "total_incidents": 12,
+        "handled": 12,
+        "deadlines_met": 10,
+        "unhandled": 0,
+        "responders_used": 9,
+        "average_response_seconds": 32.78187593149415,
+        "deadlines_met_percent_all": 83.33333333333333,
+        "deadlines_met_percent_handled": 83.33333333333333,
+        "handled_by_priority": {
+          "Critical": 6,
+          "High": 5,
+          "Medium": 1,
+          "Low": 0
+        }
+      },
+      "solver_decisions": 0,
+      "unproven_decisions": 0,
+      "solver_statuses": [],
+      "assignments": [
+        {
+          "responder_id": "R10",
+          "incident_id": "I3",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N2"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 0.0,
+          "completion_time": 10.0
+        },
+        {
+          "responder_id": "R6",
+          "incident_id": "I6",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N6",
+              "N5"
+            ],
+            "roads": [
+              "N6->N5"
+            ],
+            "seconds": 34.52997762863536
+          },
+          "arrival_time": 34.52997762863536,
+          "completion_time": 79.52997762863535
+        },
+        {
+          "responder_id": "R7",
+          "incident_id": "I4",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N10",
+              "N9",
+              "N7"
+            ],
+            "roads": [
+              "N10->N9",
+              "N9->N7"
+            ],
+            "seconds": 35.452096477947066
+          },
+          "arrival_time": 35.452096477947066,
+          "completion_time": 70.45209647794707
+        },
+        {
+          "responder_id": "R4",
+          "incident_id": "I5",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N8"
+            ],
+            "roads": [
+              "H2->N8"
+            ],
+            "seconds": 36.23687943262412
+          },
+          "arrival_time": 36.23687943262412,
+          "completion_time": 66.23687943262412
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I1",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N4",
+              "N1"
+            ],
+            "roads": [
+              "H1->N4",
+              "N4->N1"
+            ],
+            "seconds": 47.023268970606324
+          },
+          "arrival_time": 47.023268970606324,
+          "completion_time": 62.023268970606324
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I2",
+          "departure_time": 10.0,
+          "route": {
+            "nodes": [
+              "N2",
+              "N7"
+            ],
+            "roads": [
+              "N2->N7"
+            ],
+            "seconds": 10.782851637764933
+          },
+          "arrival_time": 20.782851637764935,
+          "completion_time": 40.782851637764935
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I7",
+          "departure_time": 10.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N8",
+              "N9",
+              "N10"
+            ],
+            "roads": [
+              "H2->N8",
+              "N8->N9",
+              "N9->N10"
+            ],
+            "seconds": 66.8311724423631
+          },
+          "arrival_time": 76.8311724423631,
+          "completion_time": 96.8311724423631
+        },
+        {
+          "responder_id": "R8",
+          "incident_id": "I8",
+          "departure_time": 20.0,
+          "route": {
+            "nodes": [
+              "N10",
+              "N9",
+              "N2"
+            ],
+            "roads": [
+              "N10->N9",
+              "N9->N2"
+            ],
+            "seconds": 32.47117162245574
+          },
+          "arrival_time": 52.47117162245574,
+          "completion_time": 87.47117162245574
+        },
+        {
+          "responder_id": "R2",
+          "incident_id": "I9",
+          "departure_time": 30.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N3",
+              "N5"
+            ],
+            "roads": [
+              "H1->N3",
+              "N3->N5"
+            ],
+            "seconds": 45.20226680267482
+          },
+          "arrival_time": 75.20226680267481,
+          "completion_time": 95.20226680267481
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I10",
+          "departure_time": 40.0,
+          "route": {
+            "nodes": [
+              "N6",
+              "N5",
+              "N4"
+            ],
+            "roads": [
+              "N6->N5",
+              "N5->N4"
+            ],
+            "seconds": 44.65040152073555
+          },
+          "arrival_time": 84.65040152073556,
+          "completion_time": 124.65040152073556
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I11",
+          "departure_time": 50.0,
+          "route": {
+            "nodes": [
+              "N7",
+              "N9"
+            ],
+            "roads": [
+              "N7->N9"
+            ],
+            "seconds": 10.672447013487476
+          },
+          "arrival_time": 60.67244701348748,
+          "completion_time": 85.67244701348747
+        },
+        {
+          "responder_id": "R6",
+          "incident_id": "I12",
+          "departure_time": 79.52997762863535,
+          "route": {
+            "nodes": [
+              "N5"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 79.52997762863535,
+          "completion_time": 114.52997762863535
+        }
+      ]
+    },
+    {
+      "scenario": "Scenario3",
+      "deadline_policy": "strict",
+      "allocator": "csp",
+      "statistics": {
+        "total_incidents": 20,
+        "handled": 13,
+        "deadlines_met": 13,
+        "unhandled": 7,
+        "responders_used": 8,
+        "average_response_seconds": 607.9365079922349,
+        "deadlines_met_percent_all": 65.0,
+        "deadlines_met_percent_handled": 100.0,
+        "handled_by_priority": {
+          "Critical": 3,
+          "High": 7,
+          "Medium": 3,
+          "Low": 0
+        }
+      },
+      "solver_decisions": 47,
+      "unproven_decisions": 0,
+      "solver_statuses": [
+        "NO_CANDIDATES",
+        "OPTIMAL"
+      ],
+      "assignments": [
+        {
+          "responder_id": "R2",
+          "incident_id": "I4",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N8"
+            ],
+            "roads": [
+              "H1->N8"
+            ],
+            "seconds": 590.9313725490196
+          },
+          "arrival_time": 590.9313725490196,
+          "completion_time": 620.9313725490196
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I1",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N7",
+              "N20",
+              "N1"
+            ],
+            "roads": [
+              "H2->N7",
+              "N7->N20",
+              "N20->N1"
+            ],
+            "seconds": 596.6861385016434
+          },
+          "arrival_time": 596.6861385016434,
+          "completion_time": 611.6861385016434
+        },
+        {
+          "responder_id": "R9",
+          "incident_id": "I2",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "P1",
+              "N7"
+            ],
+            "roads": [
+              "P1->N7"
+            ],
+            "seconds": 642.702119460501
+          },
+          "arrival_time": 642.702119460501,
+          "completion_time": 662.702119460501
+        },
+        {
+          "responder_id": "R4",
+          "incident_id": "I7",
+          "departure_time": 120.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N5",
+              "N3"
+            ],
+            "roads": [
+              "H2->N5",
+              "N5->N3"
+            ],
+            "seconds": 854.098357709069
+          },
+          "arrival_time": 974.098357709069,
+          "completion_time": 994.098357709069
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I8",
+          "departure_time": 360.0,
+          "route": {
+            "nodes": [
+              "N5",
+              "N3",
+              "N4"
+            ],
+            "roads": [
+              "N5->N3",
+              "N3->N4"
+            ],
+            "seconds": 600.6093403680284
+          },
+          "arrival_time": 960.6093403680284,
+          "completion_time": 1000.6093403680284
+        },
+        {
+          "responder_id": "R9",
+          "incident_id": "I9",
+          "departure_time": 662.702119460501,
+          "route": {
+            "nodes": [
+              "N7",
+              "N2",
+              "N9"
+            ],
+            "roads": [
+              "N7->N2",
+              "N2->N9"
+            ],
+            "seconds": 1232.7044315992293
+          },
+          "arrival_time": 1895.4065510597302,
+          "completion_time": 1920.4065510597302
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I10",
+          "departure_time": 1140.0,
+          "route": {
+            "nodes": [
+              "N4",
+              "N3",
+              "N5"
+            ],
+            "roads": [
+              "N4->N3",
+              "N3->N5"
+            ],
+            "seconds": 600.6093403680284
+          },
+          "arrival_time": 1740.6093403680284,
+          "completion_time": 1775.6093403680284
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I12",
+          "departure_time": 1500.0,
+          "route": {
+            "nodes": [
+              "P2",
+              "N12"
+            ],
+            "roads": [
+              "P2->N12"
+            ],
+            "seconds": 402.314450867052
+          },
+          "arrival_time": 1902.314450867052,
+          "completion_time": 1922.314450867052
+        },
+        {
+          "responder_id": "R7",
+          "incident_id": "I13",
+          "departure_time": 2750.0,
+          "route": {
+            "nodes": [
+              "F2",
+              "P2",
+              "N12",
+              "N6"
+            ],
+            "roads": [
+              "F2->P2",
+              "P2->N12",
+              "N12->N6"
+            ],
+            "seconds": 976.749710982659
+          },
+          "arrival_time": 3726.749710982659,
+          "completion_time": 3756.749710982659
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I16",
+          "departure_time": 4200.0,
+          "route": {
+            "nodes": [
+              "N5",
+              "H2",
+              "N7"
+            ],
+            "roads": [
+              "N5->H2",
+              "H2->N7"
+            ],
+            "seconds": 752.1358494843024
+          },
+          "arrival_time": 4952.1358494843025,
+          "completion_time": 4982.1358494843025
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I18",
+          "departure_time": 4600.0,
+          "route": {
+            "nodes": [
+              "N1"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 4600.0,
+          "completion_time": 4620.0
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I20",
+          "departure_time": 5000.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N8"
+            ],
+            "roads": [
+              "H1->N8"
+            ],
+            "seconds": 590.9313725490196
+          },
+          "arrival_time": 5590.931372549019,
+          "completion_time": 5610.931372549019
+        },
+        {
+          "responder_id": "R9",
+          "incident_id": "I19",
+          "departure_time": 5000.0,
+          "route": {
+            "nodes": [
+              "N9"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 5000.0,
+          "completion_time": 5025.0
+        }
+      ]
+    },
+    {
+      "scenario": "Scenario3",
+      "deadline_policy": "strict",
+      "allocator": "nearest",
+      "statistics": {
+        "total_incidents": 20,
+        "handled": 15,
+        "deadlines_met": 15,
+        "unhandled": 5,
+        "responders_used": 7,
+        "average_response_seconds": 586.2347761557716,
+        "deadlines_met_percent_all": 75.0,
+        "deadlines_met_percent_handled": 100.0,
+        "handled_by_priority": {
+          "Critical": 5,
+          "High": 7,
+          "Medium": 3,
+          "Low": 0
+        }
+      },
+      "solver_decisions": 0,
+      "unproven_decisions": 0,
+      "solver_statuses": [],
+      "assignments": [
+        {
+          "responder_id": "R1",
+          "incident_id": "I4",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N8"
+            ],
+            "roads": [
+              "H1->N8"
+            ],
+            "seconds": 590.9313725490196
+          },
+          "arrival_time": 590.9313725490196,
+          "completion_time": 620.9313725490196
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I1",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N7",
+              "N20",
+              "N1"
+            ],
+            "roads": [
+              "H2->N7",
+              "N7->N20",
+              "N20->N1"
+            ],
+            "seconds": 596.6861385016434
+          },
+          "arrival_time": 596.6861385016434,
+          "completion_time": 611.6861385016434
+        },
+        {
+          "responder_id": "R9",
+          "incident_id": "I2",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "P1",
+              "N7"
+            ],
+            "roads": [
+              "P1->N7"
+            ],
+            "seconds": 642.702119460501
+          },
+          "arrival_time": 642.702119460501,
+          "completion_time": 662.702119460501
+        },
+        {
+          "responder_id": "R4",
+          "incident_id": "I7",
+          "departure_time": 120.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N5",
+              "N3"
+            ],
+            "roads": [
+              "H2->N5",
+              "N5->N3"
+            ],
+            "seconds": 854.098357709069
+          },
+          "arrival_time": 974.098357709069,
+          "completion_time": 994.098357709069
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I8",
+          "departure_time": 360.0,
+          "route": {
+            "nodes": [
+              "N5",
+              "N3",
+              "N4"
+            ],
+            "roads": [
+              "N5->N3",
+              "N3->N4"
+            ],
+            "seconds": 600.6093403680284
+          },
+          "arrival_time": 960.6093403680284,
+          "completion_time": 1000.6093403680284
+        },
+        {
+          "responder_id": "R9",
+          "incident_id": "I9",
+          "departure_time": 662.702119460501,
+          "route": {
+            "nodes": [
+              "N7",
+              "N2",
+              "N9"
+            ],
+            "roads": [
+              "N7->N2",
+              "N2->N9"
+            ],
+            "seconds": 1232.7044315992293
+          },
+          "arrival_time": 1895.4065510597302,
+          "completion_time": 1920.4065510597302
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I11",
+          "departure_time": 1140.0,
+          "route": {
+            "nodes": [
+              "N8"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 1140.0,
+          "completion_time": 1160.0
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I10",
+          "departure_time": 1140.0,
+          "route": {
+            "nodes": [
+              "N4",
+              "N3",
+              "N5"
+            ],
+            "roads": [
+              "N4->N3",
+              "N3->N5"
+            ],
+            "seconds": 600.6093403680284
+          },
+          "arrival_time": 1740.6093403680284,
+          "completion_time": 1775.6093403680284
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I12",
+          "departure_time": 1500.0,
+          "route": {
+            "nodes": [
+              "P2",
+              "N12"
+            ],
+            "roads": [
+              "P2->N12"
+            ],
+            "seconds": 402.314450867052
+          },
+          "arrival_time": 1902.314450867052,
+          "completion_time": 1922.314450867052
+        },
+        {
+          "responder_id": "R7",
+          "incident_id": "I13",
+          "departure_time": 2750.0,
+          "route": {
+            "nodes": [
+              "F2",
+              "P2",
+              "N12",
+              "N6"
+            ],
+            "roads": [
+              "F2->P2",
+              "P2->N12",
+              "N12->N6"
+            ],
+            "seconds": 976.749710982659
+          },
+          "arrival_time": 3726.749710982659,
+          "completion_time": 3756.749710982659
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I14",
+          "departure_time": 3000.0,
+          "route": {
+            "nodes": [
+              "N8",
+              "N5",
+              "N3"
+            ],
+            "roads": [
+              "N8->N5",
+              "N5->N3"
+            ],
+            "seconds": 740.6392054932693
+          },
+          "arrival_time": 3740.6392054932694,
+          "completion_time": 3760.6392054932694
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I16",
+          "departure_time": 4200.0,
+          "route": {
+            "nodes": [
+              "N5",
+              "H2",
+              "N7"
+            ],
+            "roads": [
+              "N5->H2",
+              "H2->N7"
+            ],
+            "seconds": 752.1358494843024
+          },
+          "arrival_time": 4952.1358494843025,
+          "completion_time": 4982.1358494843025
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I18",
+          "departure_time": 4600.0,
+          "route": {
+            "nodes": [
+              "N1"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 4600.0,
+          "completion_time": 4620.0
+        },
+        {
+          "responder_id": "R9",
+          "incident_id": "I19",
+          "departure_time": 5000.0,
+          "route": {
+            "nodes": [
+              "N9"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 5000.0,
+          "completion_time": 5025.0
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I20",
+          "departure_time": 5000.0,
+          "route": {
+            "nodes": [
+              "N3",
+              "N5",
+              "N8"
+            ],
+            "roads": [
+              "N3->N5",
+              "N5->N8"
+            ],
+            "seconds": 740.6392054932693
+          },
+          "arrival_time": 5740.639205493269,
+          "completion_time": 5760.639205493269
+        }
+      ]
+    },
+    {
+      "scenario": "Scenario3",
+      "deadline_policy": "allow_late",
+      "allocator": "csp",
+      "statistics": {
+        "total_incidents": 20,
+        "handled": 20,
+        "deadlines_met": 11,
+        "unhandled": 0,
+        "responders_used": 10,
+        "average_response_seconds": 1408.1819230376543,
+        "deadlines_met_percent_all": 55.0,
+        "deadlines_met_percent_handled": 55.0,
+        "handled_by_priority": {
+          "Critical": 8,
+          "High": 8,
+          "Medium": 4,
+          "Low": 0
+        }
+      },
+      "solver_decisions": 62,
+      "unproven_decisions": 0,
+      "solver_statuses": [
+        "NO_CANDIDATES",
+        "OPTIMAL"
+      ],
+      "assignments": [
+        {
+          "responder_id": "R2",
+          "incident_id": "I4",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N8"
+            ],
+            "roads": [
+              "H1->N8"
+            ],
+            "seconds": 590.9313725490196
+          },
+          "arrival_time": 590.9313725490196,
+          "completion_time": 620.9313725490196
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I1",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N7",
+              "N20",
+              "N1"
+            ],
+            "roads": [
+              "H2->N7",
+              "N7->N20",
+              "N20->N1"
+            ],
+            "seconds": 596.6861385016434
+          },
+          "arrival_time": 596.6861385016434,
+          "completion_time": 611.6861385016434
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I3",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N5",
+              "N3",
+              "N4",
+              "N9",
+              "N17"
+            ],
+            "roads": [
+              "N5->N3",
+              "N3->N4",
+              "N4->N9",
+              "N9->N17"
+            ],
+            "seconds": 1922.483192799174
+          },
+          "arrival_time": 1922.483192799174,
+          "completion_time": 1957.483192799174
+        },
+        {
+          "responder_id": "R8",
+          "incident_id": "I5",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "F2",
+              "P2",
+              "H2",
+              "N5"
+            ],
+            "roads": [
+              "F2->P2",
+              "P2->H2",
+              "H2->N5"
+            ],
+            "seconds": 1439.1610789980732
+          },
+          "arrival_time": 1439.1610789980732,
+          "completion_time": 1484.1610789980732
+        },
+        {
+          "responder_id": "R9",
+          "incident_id": "I2",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "P1",
+              "N7"
+            ],
+            "roads": [
+              "P1->N7"
+            ],
+            "seconds": 642.702119460501
+          },
+          "arrival_time": 642.702119460501,
+          "completion_time": 662.702119460501
+        },
+        {
+          "responder_id": "R7",
+          "incident_id": "I6",
+          "departure_time": 60.0,
+          "route": {
+            "nodes": [
+              "F2",
+              "P2",
+              "H2",
+              "N7",
+              "N2",
+              "N9",
+              "N17",
+              "N16",
+              "N10"
+            ],
+            "roads": [
+              "F2->P2",
+              "P2->H2",
+              "H2->N7",
+              "N7->N2",
+              "N2->N9",
+              "N9->N17",
+              "N17->N16",
+              "N16->N10"
+            ],
+            "seconds": 4561.793902300805
+          },
+          "arrival_time": 4621.793902300805,
+          "completion_time": 4656.793902300805
+        },
+        {
+          "responder_id": "R4",
+          "incident_id": "I7",
+          "departure_time": 120.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N5",
+              "N3"
+            ],
+            "roads": [
+              "H2->N5",
+              "N5->N3"
+            ],
+            "seconds": 854.098357709069
+          },
+          "arrival_time": 974.098357709069,
+          "completion_time": 994.098357709069
+        },
+        {
+          "responder_id": "R6",
+          "incident_id": "I8",
+          "departure_time": 360.0,
+          "route": {
+            "nodes": [
+              "F1",
+              "N6",
+              "N12",
+              "P2",
+              "H2",
+              "N5",
+              "N3",
+              "N4"
+            ],
+            "roads": [
+              "F1->N6",
+              "N6->N12",
+              "N12->P2",
+              "P2->H2",
+              "H2->N5",
+              "N5->N3",
+              "N3->N4"
+            ],
+            "seconds": 2820.147105300591
+          },
+          "arrival_time": 3180.147105300591,
+          "completion_time": 3220.147105300591
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I9",
+          "departure_time": 600.0,
+          "route": {
+            "nodes": [
+              "P2",
+              "H2",
+              "N7",
+              "N2",
+              "N9"
+            ],
+            "roads": [
+              "P2->H2",
+              "H2->N7",
+              "N7->N2",
+              "N2->N9"
+            ],
+            "seconds": 2116.4425932222603
+          },
+          "arrival_time": 2716.4425932222603,
+          "completion_time": 2741.4425932222603
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I11",
+          "departure_time": 1140.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N8"
+            ],
+            "roads": [
+              "H1->N8"
+            ],
+            "seconds": 590.9313725490196
+          },
+          "arrival_time": 1730.9313725490197,
+          "completion_time": 1750.9313725490197
+        },
+        {
+          "responder_id": "R8",
+          "incident_id": "I10",
+          "departure_time": 1484.1610789980732,
+          "route": {
+            "nodes": [
+              "N5"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 1484.1610789980732,
+          "completion_time": 1519.1610789980732
+        },
+        {
+          "responder_id": "R9",
+          "incident_id": "I12",
+          "departure_time": 1500.0,
+          "route": {
+            "nodes": [
+              "N7",
+              "H2",
+              "P2",
+              "N12"
+            ],
+            "roads": [
+              "N7->H2",
+              "H2->P2",
+              "P2->N12"
+            ],
+            "seconds": 1225.8001070434598
+          },
+          "arrival_time": 2725.80010704346,
+          "completion_time": 2745.80010704346
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I13",
+          "departure_time": 2750.0,
+          "route": {
+            "nodes": [
+              "N17",
+              "N9",
+              "N2",
+              "N7",
+              "H2",
+              "P2",
+              "N12",
+              "N6"
+            ],
+            "roads": [
+              "N17->N9",
+              "N9->N2",
+              "N2->N7",
+              "N7->H2",
+              "H2->P2",
+              "P2->N12",
+              "N12->N6"
+            ],
+            "seconds": 3532.8880249852027
+          },
+          "arrival_time": 6282.888024985203,
+          "completion_time": 6312.888024985203
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I14",
+          "departure_time": 3000.0,
+          "route": {
+            "nodes": [
+              "N8",
+              "N5",
+              "N3"
+            ],
+            "roads": [
+              "N8->N5",
+              "N5->N3"
+            ],
+            "seconds": 740.6392054932693
+          },
+          "arrival_time": 3740.6392054932694,
+          "completion_time": 3760.6392054932694
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I15",
+          "departure_time": 3250.0,
+          "route": {
+            "nodes": [
+              "N9",
+              "N17",
+              "N16",
+              "N10"
+            ],
+            "roads": [
+              "N9->N17",
+              "N17->N16",
+              "N16->N10"
+            ],
+            "seconds": 2173.24071177604
+          },
+          "arrival_time": 5423.2407117760395,
+          "completion_time": 5443.2407117760395
+        },
+        {
+          "responder_id": "R8",
+          "incident_id": "I16",
+          "departure_time": 4200.0,
+          "route": {
+            "nodes": [
+              "N5",
+              "H2",
+              "N7"
+            ],
+            "roads": [
+              "N5->H2",
+              "H2->N7"
+            ],
+            "seconds": 752.1358494843024
+          },
+          "arrival_time": 4952.1358494843025,
+          "completion_time": 4982.1358494843025
+        },
+        {
+          "responder_id": "R6",
+          "incident_id": "I17",
+          "departure_time": 4500.0,
+          "route": {
+            "nodes": [
+              "N4"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 4500.0,
+          "completion_time": 4535.0
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I18",
+          "departure_time": 4600.0,
+          "route": {
+            "nodes": [
+              "N1"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 4600.0,
+          "completion_time": 4620.0
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I20",
+          "departure_time": 5000.0,
+          "route": {
+            "nodes": [
+              "N3",
+              "N5",
+              "N8"
+            ],
+            "roads": [
+              "N3->N5",
+              "N5->N8"
+            ],
+            "seconds": 740.6392054932693
+          },
+          "arrival_time": 5740.639205493269,
+          "completion_time": 5760.639205493269
+        },
+        {
+          "responder_id": "R9",
+          "incident_id": "I19",
+          "departure_time": 5000.0,
+          "route": {
+            "nodes": [
+              "N12",
+              "P2",
+              "H2",
+              "N7",
+              "N2",
+              "N9"
+            ],
+            "roads": [
+              "N12->P2",
+              "P2->H2",
+              "H2->N7",
+              "N7->N2",
+              "N2->N9"
+            ],
+            "seconds": 2518.7570440893123
+          },
+          "arrival_time": 7518.757044089312,
+          "completion_time": 7543.757044089312
+        }
+      ]
+    },
+    {
+      "scenario": "Scenario3",
+      "deadline_policy": "allow_late",
+      "allocator": "nearest",
+      "statistics": {
+        "total_incidents": 20,
+        "handled": 20,
+        "deadlines_met": 12,
+        "unhandled": 0,
+        "responders_used": 9,
+        "average_response_seconds": 1378.6353544102033,
+        "deadlines_met_percent_all": 60.0,
+        "deadlines_met_percent_handled": 60.0,
+        "handled_by_priority": {
+          "Critical": 8,
+          "High": 8,
+          "Medium": 4,
+          "Low": 0
+        }
+      },
+      "solver_decisions": 0,
+      "unproven_decisions": 0,
+      "solver_statuses": [],
+      "assignments": [
+        {
+          "responder_id": "R1",
+          "incident_id": "I4",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H1",
+              "N8"
+            ],
+            "roads": [
+              "H1->N8"
+            ],
+            "seconds": 590.9313725490196
+          },
+          "arrival_time": 590.9313725490196,
+          "completion_time": 620.9313725490196
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I1",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N7",
+              "N20",
+              "N1"
+            ],
+            "roads": [
+              "H2->N7",
+              "N7->N20",
+              "N20->N1"
+            ],
+            "seconds": 596.6861385016434
+          },
+          "arrival_time": 596.6861385016434,
+          "completion_time": 611.6861385016434
+        },
+        {
+          "responder_id": "R9",
+          "incident_id": "I2",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "P1",
+              "N7"
+            ],
+            "roads": [
+              "P1->N7"
+            ],
+            "seconds": 642.702119460501
+          },
+          "arrival_time": 642.702119460501,
+          "completion_time": 662.702119460501
+        },
+        {
+          "responder_id": "R8",
+          "incident_id": "I5",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "F2",
+              "P2",
+              "H2",
+              "N5"
+            ],
+            "roads": [
+              "F2->P2",
+              "P2->H2",
+              "H2->N5"
+            ],
+            "seconds": 1439.1610789980732
+          },
+          "arrival_time": 1439.1610789980732,
+          "completion_time": 1484.1610789980732
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I3",
+          "departure_time": 0.0,
+          "route": {
+            "nodes": [
+              "N5",
+              "N3",
+              "N4",
+              "N9",
+              "N17"
+            ],
+            "roads": [
+              "N5->N3",
+              "N3->N4",
+              "N4->N9",
+              "N9->N17"
+            ],
+            "seconds": 1922.483192799174
+          },
+          "arrival_time": 1922.483192799174,
+          "completion_time": 1957.483192799174
+        },
+        {
+          "responder_id": "R7",
+          "incident_id": "I6",
+          "departure_time": 60.0,
+          "route": {
+            "nodes": [
+              "F2",
+              "P2",
+              "H2",
+              "N7",
+              "N2",
+              "N9",
+              "N17",
+              "N16",
+              "N10"
+            ],
+            "roads": [
+              "F2->P2",
+              "P2->H2",
+              "H2->N7",
+              "N7->N2",
+              "N2->N9",
+              "N9->N17",
+              "N17->N16",
+              "N16->N10"
+            ],
+            "seconds": 4561.793902300805
+          },
+          "arrival_time": 4621.793902300805,
+          "completion_time": 4656.793902300805
+        },
+        {
+          "responder_id": "R4",
+          "incident_id": "I7",
+          "departure_time": 120.0,
+          "route": {
+            "nodes": [
+              "H2",
+              "N5",
+              "N3"
+            ],
+            "roads": [
+              "H2->N5",
+              "N5->N3"
+            ],
+            "seconds": 854.098357709069
+          },
+          "arrival_time": 974.098357709069,
+          "completion_time": 994.098357709069
+        },
+        {
+          "responder_id": "R6",
+          "incident_id": "I8",
+          "departure_time": 360.0,
+          "route": {
+            "nodes": [
+              "F1",
+              "N6",
+              "N12",
+              "P2",
+              "H2",
+              "N5",
+              "N3",
+              "N4"
+            ],
+            "roads": [
+              "F1->N6",
+              "N6->N12",
+              "N12->P2",
+              "P2->H2",
+              "H2->N5",
+              "N5->N3",
+              "N3->N4"
+            ],
+            "seconds": 2820.147105300591
+          },
+          "arrival_time": 3180.147105300591,
+          "completion_time": 3220.147105300591
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I9",
+          "departure_time": 600.0,
+          "route": {
+            "nodes": [
+              "P2",
+              "H2",
+              "N7",
+              "N2",
+              "N9"
+            ],
+            "roads": [
+              "P2->H2",
+              "H2->N7",
+              "N7->N2",
+              "N2->N9"
+            ],
+            "seconds": 2116.4425932222603
+          },
+          "arrival_time": 2716.4425932222603,
+          "completion_time": 2741.4425932222603
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I11",
+          "departure_time": 1140.0,
+          "route": {
+            "nodes": [
+              "N8"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 1140.0,
+          "completion_time": 1160.0
+        },
+        {
+          "responder_id": "R8",
+          "incident_id": "I10",
+          "departure_time": 1484.1610789980732,
+          "route": {
+            "nodes": [
+              "N5"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 1484.1610789980732,
+          "completion_time": 1519.1610789980732
+        },
+        {
+          "responder_id": "R9",
+          "incident_id": "I12",
+          "departure_time": 1500.0,
+          "route": {
+            "nodes": [
+              "N7",
+              "H2",
+              "P2",
+              "N12"
+            ],
+            "roads": [
+              "N7->H2",
+              "H2->P2",
+              "P2->N12"
+            ],
+            "seconds": 1225.8001070434598
+          },
+          "arrival_time": 2725.80010704346,
+          "completion_time": 2745.80010704346
+        },
+        {
+          "responder_id": "R5",
+          "incident_id": "I13",
+          "departure_time": 2750.0,
+          "route": {
+            "nodes": [
+              "N17",
+              "N9",
+              "N2",
+              "N7",
+              "H2",
+              "P2",
+              "N12",
+              "N6"
+            ],
+            "roads": [
+              "N17->N9",
+              "N9->N2",
+              "N2->N7",
+              "N7->H2",
+              "H2->P2",
+              "P2->N12",
+              "N12->N6"
+            ],
+            "seconds": 3532.8880249852027
+          },
+          "arrival_time": 6282.888024985203,
+          "completion_time": 6312.888024985203
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I14",
+          "departure_time": 3000.0,
+          "route": {
+            "nodes": [
+              "N8",
+              "N5",
+              "N3"
+            ],
+            "roads": [
+              "N8->N5",
+              "N5->N3"
+            ],
+            "seconds": 740.6392054932693
+          },
+          "arrival_time": 3740.6392054932694,
+          "completion_time": 3760.6392054932694
+        },
+        {
+          "responder_id": "R10",
+          "incident_id": "I15",
+          "departure_time": 3250.0,
+          "route": {
+            "nodes": [
+              "N9",
+              "N17",
+              "N16",
+              "N10"
+            ],
+            "roads": [
+              "N9->N17",
+              "N17->N16",
+              "N16->N10"
+            ],
+            "seconds": 2173.24071177604
+          },
+          "arrival_time": 5423.2407117760395,
+          "completion_time": 5443.2407117760395
+        },
+        {
+          "responder_id": "R8",
+          "incident_id": "I16",
+          "departure_time": 4200.0,
+          "route": {
+            "nodes": [
+              "N5",
+              "H2",
+              "N7"
+            ],
+            "roads": [
+              "N5->H2",
+              "H2->N7"
+            ],
+            "seconds": 752.1358494843024
+          },
+          "arrival_time": 4952.1358494843025,
+          "completion_time": 4982.1358494843025
+        },
+        {
+          "responder_id": "R6",
+          "incident_id": "I17",
+          "departure_time": 4500.0,
+          "route": {
+            "nodes": [
+              "N4"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 4500.0,
+          "completion_time": 4535.0
+        },
+        {
+          "responder_id": "R3",
+          "incident_id": "I18",
+          "departure_time": 4600.0,
+          "route": {
+            "nodes": [
+              "N1"
+            ],
+            "roads": [],
+            "seconds": 0.0
+          },
+          "arrival_time": 4600.0,
+          "completion_time": 4620.0
+        },
+        {
+          "responder_id": "R1",
+          "incident_id": "I20",
+          "departure_time": 5000.0,
+          "route": {
+            "nodes": [
+              "N3",
+              "N5",
+              "N8"
+            ],
+            "roads": [
+              "N3->N5",
+              "N5->N8"
+            ],
+            "seconds": 740.6392054932693
+          },
+          "arrival_time": 5740.639205493269,
+          "completion_time": 5760.639205493269
+        },
+        {
+          "responder_id": "R9",
+          "incident_id": "I19",
+          "departure_time": 5000.0,
+          "route": {
+            "nodes": [
+              "N12",
+              "P2",
+              "H2",
+              "N7",
+              "N2",
+              "N9"
+            ],
+            "roads": [
+              "N12->P2",
+              "P2->H2",
+              "H2->N7",
+              "N7->N2",
+              "N2->N9"
+            ],
+            "seconds": 2518.7570440893123
+          },
+          "arrival_time": 7518.757044089312,
+          "completion_time": 7543.757044089312
+        }
+      ]
+    }
+  ]
+}
