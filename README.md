@@ -25,7 +25,15 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-Normal runs now allocate online with CP-SAT; no script is needed:
+nOpen `run.py` in your IDE and click Run without program arguments, or run
+`python run.py` in a terminal with the project environment active. Enter 1, 2
+or 3 to select a scenario, or 0 to exit. The menu uses the same settings for
+every scenario (CP-SAT, strict deadlines, Bayesian threshold .20, bounded HMM
+with .05 extra travel and .10 minimum exposure reduction). It saves the plan
+and statistics separately under `results/menu/ScenarioN/` and prints their
+locations. Rerunning a scenario replaces its two menu outputs.
+
+For explicit command-line runs, select the scenario and policies with flags:
 
 ```powershell
 .\.venv\Scripts\python.exe run.py Scenarios/Scenario1 --routing-policy bayesian --block-threshold 0.2

@@ -2,6 +2,7 @@
 import argparse
 from dataclasses import asdict
 import json
+import sys
 from math import isfinite
 from pathlib import Path
 
@@ -62,6 +63,26 @@ def execution_output(scenario, graph, beliefs, dispatcher, *, strict_deadlines=T
     }
 
 
+def choose_scenario():
+    """Return a bundled scenario path, or None if the user exits."""
+    root = Path(__file__).resolve().parent / "Scenarios"
+    print("Choose an emergency response scenario")
+    for number in ("1", "2", "3"):
+        print(f"  {number}. Scenario {number}")
+    print("  0. Exit")
+    while True:
+        try:
+            choice = input("Enter a number: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return None
+        if choice == "0":
+            return None
+        if choice in ("1", "2", "3"):
+            return root / f"Scenario{choice}"
+        print("Please enter 1, 2, 3 or 0.")
+
+
 def main():
     """Select a mode, run it and print explicit modeled results as JSON.
 
@@ -95,7 +116,22 @@ def main():
     parser.add_argument("--min-exposure-reduction", type=float, default=.10, help="Required fractional exposure improvement (default .10)")
     parser.add_argument("--allow-late", action="store_true", help="Allow late response; preserve deadline misses")
     parser.add_argument("--solver-time-limit", type=float, default=2.0, help="Shared wall seconds per CSP decision")
-    args = parser.parse_args()
+    interactive = len(sys.argv) == 1
+    if interactive:
+        scenario_path = choose_scenario()
+        if scenario_path is None:
+            return
+        args = parser.parse_args([
+            str(scenario_path),
+            "--routing-policy", "bayesian",
+            "--block-threshold", ".20",
+            "--traffic-policy", "hmm-bounded",
+            "--max-extra-fraction", ".05",
+            "--min-exposure-reduction", ".10",
+            "--output-dir", str(Path(__file__).resolve().parent / "results" / "menu" / scenario_path.name),
+        ])
+    else:
+        args = parser.parse_args()
     if args.traffic_policy != "bayesian-only" and args.routing_policy != "bayesian":
         parser.error("HMM route policies require --routing-policy bayesian")
     if (args.traffic_policy == "hmm-bounded") != (args.max_extra_fraction is not None):
@@ -182,7 +218,15 @@ def main():
             result.update(execution_output(scenario, graph, beliefs, dispatcher,
                                            strict_deadlines=not args.allow_late, route_planner=planner,
                                            output_directory=args.output_dir, **export_options))
-        print(json.dumps(result, indent=2))
+        if interactive:
+            print(f"\n{result['scenario']} complete.")
+            for key in ("plan", "statistics"):
+                output_path = Path(result["output_files"][key])
+                print(f"\n{output_path.name}")
+                print(output_path.read_text(encoding="utf-8").rstrip())
+                print(f"Saved to {output_path}")
+        else:
+            print(json.dumps(result, indent=2))
     except (OSError, ValueError, TypeError, AllocationError) as error:
         parser.error(str(error))
 
