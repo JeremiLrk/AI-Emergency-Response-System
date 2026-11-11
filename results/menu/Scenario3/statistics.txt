@@ -1,0 +1,40 @@
+Emergency response results | Scenario3
+Mode: Strict deadlines
+
+Overview
+  Incidents handled: 13 of 20
+  Incidents not handled: 7
+  Responders used: 8
+  Average response time: 607.9 seconds
+
+Arrival deadlines
+  Reached on time: 13 of 20 (65.0%)
+  Reached late: 0
+  The on-time percentage includes every incident, even those not handled.
+
+Incidents handled by priority
+  Critical: 3 of 8 handled
+  High: 7 of 8 handled
+  Medium: 3 of 4 handled
+  Low: 0 of 0 handled
+  All Critical incidents handled: No
+  Critical incidents not handled: I11, I14, I17, I3, I5
+  All incidents not handled: I11, I14, I15, I17, I3, I5, I6
+
+How to read these numbers
+  Handled means a responder completed treatment.
+  The deadline is the latest time a responder can arrive and still be on time.
+  Average response time includes waiting and travel for handled incidents only.
+
+Plan check: Passed under the selected rules and estimated travel times.
+
+Run configuration:
+  Scenario: Scenario3
+  Deadline rule: Strict deadlines
+  Responder assignment: CP-SAT (assign by priority)
+  Road estimates: Bayesian (uses road reports and weather)
+  Road blockage cutoff: 20% (roads at or above this are excluded)
+  Traffic preference: Use historical traffic to consider detours
+  Maximum extra travel time: 5%
+  Minimum reduction in traffic exposure: 10%
+  Solver time limit per decision: 2 seconds

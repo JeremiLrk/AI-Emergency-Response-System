@@ -1,25 +1,40 @@
-System statistics:
-* 11 incidents handled
-* 8 responders used
-* Average response time: 33.253393488614826 s
-* Deadlines met: 91.66666666666667% (11/12 incidents)
-* Unhandled incidents: 1
-* Deadlines met among handled incidents: 100.0%
-* Late handled incidents: 0
+Emergency response results | Scenario2
+Mode: Strict deadlines
 
-Units: all simulation times and durations are seconds; fractional seconds retained.
-Handled means treatment completed, including late responses when allowed.
-Responders used means distinct responders with a committed assignment.
-Response time = arrival - incident release; includes dispatch waiting and travel, excludes treatment.
-Average response excludes unhandled incidents; coverage must be considered alongside this average.
-Primary deadline percentage = on-time arrivals / ALL incidents * 100; unhandled count as not met.
-Deadline refers to arrival, not treatment completion; arrival equal to deadline is on time.
+Overview
+  Incidents handled: 11 of 12
+  Incidents not handled: 1
+  Responders used: 8
+  Average response time: 33.3 seconds
 
-Independent validation under selected policy: VALID
-Deadline policy: strict
-Every assigned arrival meets its deadline: yes
-Unhandled incident IDs: I2
-Validity is relative to declared estimates/policy; it does not establish optimality or actual road safety.
-Travel and arrivals are modeled estimates; no hidden-road failures or recovery are simulated.
-Historical HMM exposure is a separate preference, never a travel duration.
-Run configuration: {"allocator": "csp", "blocked_threshold": 0.2, "max_extra_fraction": 0.05, "min_exposure_reduction": 0.1, "routing_policy": "bayesian", "scenario": "Scenario2", "solver_time_limit_seconds": 2.0, "strict_deadlines": true, "traffic_policy": "hmm-bounded"}
+Arrival deadlines
+  Reached on time: 11 of 12 (91.7%)
+  Reached late: 0
+  The on-time percentage includes every incident, even those not handled.
+
+Incidents handled by priority
+  Critical: 6 of 6 handled
+  High: 4 of 5 handled
+  Medium: 1 of 1 handled
+  Low: 0 of 0 handled
+  All Critical incidents handled: Yes
+  Critical incidents not handled: None
+  All incidents not handled: I2
+
+How to read these numbers
+  Handled means a responder completed treatment.
+  The deadline is the latest time a responder can arrive and still be on time.
+  Average response time includes waiting and travel for handled incidents only.
+
+Plan check: Passed under the selected rules and estimated travel times.
+
+Run configuration:
+  Scenario: Scenario2
+  Deadline rule: Strict deadlines
+  Responder assignment: CP-SAT (assign by priority)
+  Road estimates: Bayesian (uses road reports and weather)
+  Road blockage cutoff: 20% (roads at or above this are excluded)
+  Traffic preference: Use historical traffic to consider detours
+  Maximum extra travel time: 5%
+  Minimum reduction in traffic exposure: 10%
+  Solver time limit per decision: 2 seconds

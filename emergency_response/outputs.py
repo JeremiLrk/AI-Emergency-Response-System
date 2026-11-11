@@ -3,6 +3,7 @@
 No dispatch, routing or event scheduling is performed here. Independent replay
 must agree with simulation records and statistics before either file is written.
 """
+from collections import Counter
 from dataclasses import asdict
 import json
 from pathlib import Path
@@ -25,44 +26,102 @@ def make_plan(result):
              "path":list(a.route.nodes),"time":a.departure_time} for a in result.assignments]
 
 
-def render_statistics(statistics, validation, *, configuration):
-    """Render existing statistics with definitions, validity and reproducible settings.
+def render_statistics(statistics, validation, *, configuration, incidents):
+    """Summarize coverage, deadlines and response time in plain language.
 
-    Parameters: statistics is summarize(result); validation is matching successful
-        independent replay; configuration is JSON-compatible run settings mapping.
-    Preconditions: valid replay/statistics agree; full final run, not a partial view.
-    Postconditions: readable text with all section5.2 requirements. Numeric values
-        retain Python float precision; N/A denotes empty denominators. Primary
-        deadline percentage counts ALL incidents, including unhandled failures.
-        Marks permitted late mode separately from strict deadline compliance.
+    Parameters: statistics comes from the final simulation. validation is the
+        matching successful replay. configuration records the run settings.
+        incidents contains every incident from the original scenario.
+    Preconditions: the simulation and independent replay agree.
+    Postconditions: returns report text with rounded display values, counts
+        by priority and the original run settings for reproducing the plan.
     """
-    average = "N/A (no incidents handled)" if statistics.average_response_seconds is None else f"{statistics.average_response_seconds} s"
-    percentage = "N/A (no incidents)" if statistics.deadlines_met_percent_all is None else f"{statistics.deadlines_met_percent_all}%"
-    handled_percentage = "N/A (no incidents handled)" if statistics.deadlines_met_percent_handled is None else f"{statistics.deadlines_met_percent_handled}%"
-    return "\n".join([
-        "System statistics:",
-        f"* {statistics.handled} incidents handled",
-        f"* {statistics.responders_used} responders used",
-        f"* Average response time: {average}",
-        f"* Deadlines met: {percentage} ({statistics.deadlines_met}/{statistics.total_incidents} incidents)",
-        f"* Unhandled incidents: {statistics.unhandled}",
-        f"* Deadlines met among handled incidents: {handled_percentage}",
-        f"* Late handled incidents: {statistics.handled-statistics.deadlines_met}",
-        "", "Units: all simulation times and durations are seconds; fractional seconds retained.",
-        "Handled means treatment completed, including late responses when allowed.",
-        "Responders used means distinct responders with a committed assignment.",
-        "Response time = arrival - incident release; includes dispatch waiting and travel, excludes treatment.",
-        "Average response excludes unhandled incidents; coverage must be considered alongside this average.",
-        "Primary deadline percentage = on-time arrivals / ALL incidents * 100; unhandled count as not met.",
-        "Deadline refers to arrival, not treatment completion; arrival equal to deadline is on time.",
-        "", "Independent validation under selected policy: VALID",
-        f"Deadline policy: {'strict' if validation.strict_deadlines else 'allow_late (experimental; permits assignment-deadline violations)'}",
-        f"Every assigned arrival meets its deadline: {'yes' if validation.deadline_compliant else 'no'}",
-        "Unhandled incident IDs: "+(", ".join(validation.unhandled_incident_ids) or "none"),
-        "Validity is relative to declared estimates/policy; it does not establish optimality or actual road safety.",
-        "Travel and arrivals are modeled estimates; no hidden-road failures or recovery are simulated.",
-        "Historical HMM exposure is a separate preference, never a travel duration.",
-        "Run configuration: "+json.dumps(configuration,sort_keys=True,allow_nan=False), ""])
+    totals = Counter(incident.priority for incident in incidents)
+    critical_handled = statistics.handled_by_priority["Critical"]
+    if totals["Critical"] == 0:
+        all_critical = "No Critical incidents in this scenario"
+    else:
+        all_critical = "Yes" if critical_handled == totals["Critical"] else "No"
+
+    mean = statistics.average_response_seconds
+    average = "N/A (no incidents handled)" if mean is None else f"{mean:.1f} seconds"
+    percent = statistics.deadlines_met_percent_all
+    deadline_percentage = "N/A (no incidents)" if percent is None else f"{percent:.1f}%"
+    late = statistics.handled - statistics.deadlines_met
+    mode = "Strict deadlines" if validation.strict_deadlines else "Late arrivals allowed"
+    lines = [
+        f"Emergency response results | {configuration.get('scenario', 'Scenario')}",
+        f"Mode: {mode}",
+        "",
+        "Overview",
+        f"  Incidents handled: {statistics.handled} of {statistics.total_incidents}",
+        f"  Incidents not handled: {statistics.unhandled}",
+        f"  Responders used: {statistics.responders_used}",
+        f"  Average response time: {average}",
+        "",
+        "Arrival deadlines",
+        f"  Reached on time: {statistics.deadlines_met} of {statistics.total_incidents} ({deadline_percentage})",
+        f"  Reached late: {late}",
+        "  The on-time percentage includes every incident, even those not handled.",
+        "",
+        "Incidents handled by priority",
+    ]
+    for priority in ("Critical", "High", "Medium", "Low"):
+        handled = statistics.handled_by_priority[priority]
+        lines.append(f"  {priority}: {handled} of {totals[priority]} handled")
+
+    unhandled = set(validation.unhandled_incident_ids)
+    missed_critical = sorted(
+        incident.id for incident in incidents
+        if incident.priority == "Critical" and incident.id in unhandled
+    )
+    lines.extend([
+        f"  All Critical incidents handled: {all_critical}",
+        "  Critical incidents not handled: " + (", ".join(missed_critical) or "None"),
+        "  All incidents not handled: " + (", ".join(sorted(unhandled)) or "None"),
+        "",
+        "How to read these numbers",
+        "  Handled means a responder completed treatment.",
+        "  The deadline is the latest time a responder can arrive and still be on time.",
+        "  Average response time includes waiting and travel for handled incidents only.",
+        "",
+        "Plan check: Passed under the selected rules and estimated travel times.",
+        "",
+        "Run configuration:",
+        f"  Scenario: {configuration.get('scenario', 'Unspecified')}",
+        f"  Deadline rule: {mode}",
+    ])
+
+    allocator = configuration.get("allocator")
+    if allocator is not None:
+        names = {"csp": "CP-SAT (assign by priority)", "nearest": "Nearest responder", "script": "Scripted assignments"}
+        lines.append(f"  Responder assignment: {names.get(allocator, allocator)}")
+
+    if configuration["routing_policy"] == "bayesian":
+        lines.append("  Road estimates: Bayesian (uses road reports and weather)")
+        threshold = configuration["blocked_threshold"]
+        lines.append(f"  Road blockage cutoff: {threshold * 100:g}% (roads at or above this are excluded)")
+    else:
+        lines.append("  Road estimates: Assume all roads are open")
+
+    traffic = configuration.get("traffic_policy")
+    if traffic == "hmm-bounded":
+        lines.append("  Traffic preference: Use historical traffic to consider detours")
+        extra = configuration.get("max_extra_fraction")
+        reduction = configuration.get("min_exposure_reduction")
+        if extra is not None:
+            lines.append(f"  Maximum extra travel time: {extra * 100:g}%")
+        if reduction is not None:
+            lines.append(f"  Minimum reduction in traffic exposure: {reduction * 100:g}%")
+    elif traffic == "hmm-tie":
+        lines.append("  Traffic preference: Prefer lower exposure when travel times tie")
+    elif traffic == "bayesian-only":
+        lines.append("  Traffic preference: Choose the shortest estimated route")
+
+    time_limit = configuration.get("solver_time_limit_seconds")
+    if time_limit is not None and allocator == "csp":
+        lines.append(f"  Solver time limit per decision: {time_limit:g} seconds")
+    return "\n".join(lines) + "\n"
 
 
 def write_outputs(scenario, result, output_directory, *, routing_policy="baseline",
@@ -103,10 +162,13 @@ def write_outputs(scenario, result, output_directory, *, routing_policy="baselin
     if validation.statistics != statistics:
         raise ValueError("Export statistics disagree with independent original-data replay")
     settings = dict(configuration or {})
+    settings.setdefault("scenario", scenario.directory.name)
     settings.update(routing_policy=routing_policy,blocked_threshold=blocked_threshold,
                     strict_deadlines=result.strict_deadlines)
     plan_text = json.dumps(plan,indent=2,allow_nan=False)+"\n"
-    statistics_text = render_statistics(statistics,validation,configuration=settings)
+    statistics_text = render_statistics(
+        statistics, validation, configuration=settings, incidents=scenario.incidents
+    )
     destination = Path(output_directory)
     destination.mkdir(parents=True,exist_ok=True)
     plan_path, statistics_path = destination/"plan.json", destination/"statistics.txt"

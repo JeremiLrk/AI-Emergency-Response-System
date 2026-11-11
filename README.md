@@ -1,178 +1,70 @@
-﻿# AI-Emergency-Response-System
-Artificial Intelligence Practicum — Emergency response planning using search, Bayesian reasoning, constraint satisfaction, and Hidden Markov Models.
+# Emergency Response System
 
-First Prompt:
+This Python project plans emergency responses after a storm. It checks road reports and past traffic, finds routes, and decides which available responders should take each call.
 
-I've attached my AI practicum assignment, the scenarios and the course slides.
+## Get started
 
-From what I understand, we need to build a system that assigns emergency responders to incidents and finds suitable routes, while taking into account deadlines, responder availability and uncertain road conditions.
-
-We need to combine search, CSPs, Bayesian reasoning and HMMs to do this. Before starting the implementation, I want to figure out how these components should work together and how to structure the project.
-
-Since the assignment is open-ended, I'd like to discuss the possible approaches and important design decisions first. Use the course slides as the main reference, but feel free to suggest alternatives and point out problems with my approach.
-
-The goal is to build a working system that I can fully understand, test and defend afterwards.
-
-
-## Install and run
-
-Use Python 3.11/3.12 (tested 3.12.14) and the pinned OR-Tools requirement. A local
-.venv has already been created on this laptop. For a new checkout on Windows:
+Install Python 3.12. The project was tested with Python 3.12.14 and OR-Tools 9.15.6755. From the repository folder on Windows, run:
 
 ```powershell
-py -3.11 -m venv .venv
+py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe run.py
+```
+
+If you use an IDE, select the environment where you installed the requirements and run `run.py` without arguments. Choose **1**, **2** or **3** for a scenario, or **0** to exit.
+
+The menu runs the full planner with strict arrival deadlines. It uses CP-SAT for assignments, a 20% road blockage cutoff, and a historical traffic preference that allows up to 5% extra travel for at least 10% less exposure. It prints and saves two files in `results/menu/ScenarioN/`. Running the same scenario replaces its previous menu results.
+
+| File | What you get |
+| --- | --- |
+| `plan.json` | Who handles each call, the route they take, and when they leave. |
+| `statistics.txt` | Calls handled and reached on time, responders used, average response time, and the settings used. It also shows results by priority. |
+
+The average response time includes waiting and travel for calls that were handled. The deadline percentage includes all calls, including unhandled ones. A separate validator checks the plan using the original inputs and estimated travel times.
+
+## Run the tests or check a plan
+
+```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe validate_plan.py Scenarios/Scenario1 results/menu/Scenario1/plan.json --routing-policy bayesian --block-threshold .2
 ```
 
-nOpen `run.py` in your IDE and click Run without program arguments, or run
-`python run.py` in a terminal with the project environment active. Enter 1, 2
-or 3 to select a scenario, or 0 to exit. The menu uses the same settings for
-every scenario (CP-SAT, strict deadlines, Bayesian threshold .20, bounded HMM
-with .05 extra travel and .10 minimum exposure reduction). It saves the plan
-and statistics separately under `results/menu/ScenarioN/` and prints their
-locations. Rerunning a scenario replaces its two menu outputs.
+Use the same road and deadline settings as the saved run. For a plan generated with `--allow-late`, add that flag to the validator too. Exit codes are 0 for a valid plan under the selected rules, 1 for an invalid plan, and 2 for file or configuration errors.
 
-For explicit command-line runs, select the scenario and policies with flags:
+## Reproduce the comparisons
 
 ```powershell
-.\.venv\Scripts\python.exe run.py Scenarios/Scenario1 --routing-policy bayesian --block-threshold 0.2
-```
-
-The .2 threshold is illustrative, never a built-in safe default. Omitting
---routing-policy bayesian retains the original all-open routing baseline.
-Normal allocation defaults to CP-SAT, which maximizes assignments by priority,
-prefers on-time responses in late mode, then minimizes predicted response time.
-There is no deadline ranking. --solver-time-limit controls the shared per-decision
-wall budget (default 2 seconds); statuses/proof/fallbacks are printed explicitly.
-
-Other modes:
-
-```powershell
-# Compare CSP and greedy nearest on the same graph and deadline policy
-.\.venv\Scripts\python.exe run.py Scenarios/Scenario1 --compare --routing-policy bayesian --block-threshold 0.2
-# Enable late responses while recording deadline misses independently
-.\.venv\Scripts\python.exe run.py Scenarios/Scenario1 --allow-late --routing-policy bayesian --block-threshold 0.2
-# Run all three scenarios, strict and late, and save comparison JSON
-.\.venv\Scripts\python.exe benchmark.py --block-threshold 0.2
-# Keep scripted fixtures and route-only inspection
-.\.venv\Scripts\python.exe run.py Scenarios/Scenario1 --simulate-script examples/scenario1_script.json --routing-policy bayesian --block-threshold 0.2
-.\.venv\Scripts\python.exe run.py Scenarios/Scenario1 --route N1 N2 --routing-policy bayesian --block-threshold 0.2
-```
-
---allocator nearest selects one normal greedy run. --route, --simulate-script
-and --compare are mutually exclusive; --allow-late applies to execution modes.
-An invalid script/model aborts visibly. Unknown/limited solver runs retain an
-earlier valid incumbent if available and never call a timeout proof of no work.
-
-## Files
-
-- emergency_response/models.py and loaders.py: validated scenario input.
-- graph.py, search.py, routing.py: fixed graphs, handwritten UCS and all-open/status adapters.
-- bayesian.py and risk_routing.py: full road posteriors, threshold policy and risk bounds.
-- simulation.py and simulation_models.py: event controller and immutable snapshot API.
-- scripted.py: mechanical dispatch fixtures, not an allocation policy.
-- allocation.py: Boolean CP-SAT dispatcher and solver diagnostics.
-- baseline.py: nearest-feasible greedy comparison dispatcher.
-- statistics.py: modeled coverage, deadline denominators and response-time means.
-- benchmark.py and results/allocation_comparison.json: reproducible comparisons.
-- hmm.py and traffic_routing.py: historical Forward beliefs and separate route criteria.
-- benchmark_traffic.py and results/traffic_comparison.json: fixed-parameter HMM comparison.
-- outputs.py and plan_validation.py: required files and independent original-data replay.
-- validate_plan.py: standalone read-only validator.
-- tests/: 145 checks of inference, routing, simulation, optimization, exports and validity.
-- [Code explanation](CODE_GUIDE.md), [schemas](DATA_SCHEMA.md), [design](DESIGN.md),
-  [verification/results](TESTING.md), [LLM collaboration](LLM_NOTES.md).
-
-## Interpretation and scope
-
-The simulator reveals incidents at their timestamps and passes current snapshots
-only. The dispatcher cannot reserve busy responders or change committed jobs.
-Locations update after travel and remain at the incident after service. Strict
-arrival deadlines are a baseline; completed work can remain deadline-missed in
-late mode. Times are seconds. Travel is a deterministic modeled estimate; route
-blockage bounds do not certify actual arrival or safety. Required plan/statistics
-files and independent validation are implemented; real-road failure/recovery remains
-unmodeled. The final report.pdf, GitHub submission/access and defence preparation
-still need completion.
-
-All 145 tests pass. At threshold .20, strict CSP handles 6/7, 11/12, 13/20 in the
-three scenarios; nearest handles 5/7, 11/12, 15/20. Local optimization does not
-guarantee better whole-run coverage. Read TESTING.md for means, late-mode results
-and the observed equal-cost placement limitation. No disappointing result is hidden.
-
-## Historical traffic policies
-
-Forward filtering processes each directed road's historical observations once;
-missing histories retain the scenario's own prior. Bayesian travel estimates are
-unchanged. Traffic exposure is sum(normal seconds * historical P(High)), a
-separate preference score, never a travel duration or safety guarantee.
-
-```powershell
-# Exact shortest-time tie-breaker
-.\.venv\Scripts\python.exe run.py Scenarios/Scenario3 --routing-policy bayesian --block-threshold .2 --traffic-policy hmm-tie
-# At most 5% extra travel, requiring at least 10% lower exposure
-.\.venv\Scripts\python.exe run.py Scenarios/Scenario3 --routing-policy bayesian --block-threshold .2 --traffic-policy hmm-bounded --max-extra-fraction .05 --min-exposure-reduction .10
-# Same settings, all scenarios, both allocators and deadline modes
+.\.venv\Scripts\python.exe benchmark.py --block-threshold .2
 .\.venv\Scripts\python.exe benchmark_traffic.py --block-threshold .2 --max-extra-fraction .05 --min-exposure-reduction .10
 ```
 
-Omitting --traffic-policy preserves original Bayesian-only UCS when Bayesian
-routing is selected; the existing all-open routing baseline is also available.
-For strict deadlines, route detours must also fit the remaining arrival budget.
-Selected travel seconds still determine arrivals, deadlines and availability.
-The fixed comparison changes seven all-pairs routes in Scenario3, but no routes
-actually dispatched in the 36 runs; outcome metrics are unchanged. Parameters
-were not increased to produce a better result. See DESIGN.md for formulas and
-TESTING.md for the full table, worked example and limitations.
+The first compares CP-SAT with a nearest-responder rule. The second also compares three ways of using historical traffic. Both cover all three scenarios and both deadline modes.
 
-## Required output files and independent validation
+In the strict runs, CP-SAT handled **6/7**, **11/12** and **13/20** calls. Nearest handled **5/7**, **11/12** and **15/20** under the same road rules. The bounded traffic setting changed seven possible routes in Scenario 3, while the routes actually dispatched stayed the same. [Full results and how to read them](TESTING.md)
 
-A normal run now writes plan.json and statistics.txt to the current directory.
-Use --output-dir to keep runs separate. Full-system example using all four AI
-components, with the existing fixed traffic settings:
+<details>
+<summary>Advanced commands</summary>
+
+Run a scenario with the same settings as the menu and choose the output folder:
 
 ```powershell
 .\.venv\Scripts\python.exe run.py Scenarios/Scenario1 --routing-policy bayesian --block-threshold .2 --traffic-policy hmm-bounded --max-extra-fraction .05 --min-exposure-reduction .10 --output-dir results/plans/Scenario1/strict
-.\.venv\Scripts\python.exe validate_plan.py Scenarios/Scenario1 results/plans/Scenario1/strict/plan.json --routing-policy bayesian --block-threshold .2
 ```
 
-The exact required plan structure is a list of
-`{"responder_id":"R1","incident_id":"I1","path":["N1","N2"],"time":0}`
-objects. The example illustrates fields, not feasibility for a specific scenario.
-time is the recorded dispatch/start in seconds; path contains node IDs. No extra
-wrapper or fabricated arrival-time fields are added. Unhandled incidents are
-absent from plan rows and explicitly counted/listed in statistics.txt.
+Add `--allow-late` to let responders arrive after the deadline. Use a different output folder to keep both plans. Explicit runs write to the current directory when you omit `--output-dir`.
 
-statistics.txt reports completed incidents, distinct responders, mean arrival-minus-
-release response and on-time arrivals/all incidents percentage. Unhandled incidents
-count as not met and are excluded from the response mean. Empty means/denominators
-are N/A. Units, assumptions and generation configuration are recorded in the text.
+- `--allocator nearest` selects the nearest-responder comparison. `--compare` runs both allocators and creates separate `csp` and `nearest` folders.
+- `--traffic-policy hmm-tie` uses traffic only to choose among equally fast routes. `bayesian-only` uses plain UCS. For explicit Bayesian runs, pass `--block-threshold`. Explicit runs without a routing policy use the all-open baseline.
+- `--route H1 N2` inspects one route and writes no assignment files. `--simulate-script examples/scenario1_script.json` runs the scripted example. These modes and `--compare` are mutually exclusive.
+- `--solver-time-limit` sets the CP-SAT time budget per decision. The default is two seconds. The output distinguishes proven optima, valid solutions found within the budget, and cases with no solution in time.
 
-The validator recomputes paths, travel, treatment, readiness and deadlines from
-original data, without calling the simulator/search/allocator. Generation checks
-that reconstructed values and statistics agree before writing. Standalone exit
-codes:0 valid under selected policy,1 invalid plan,2 malformed input/configuration.
-Give it the same routing policy/threshold recorded in statistics.txt. HMM settings
-do not alter travel-cost validity and are not needed by the validator.
+</details>
 
---allow-late remains an experimental policy. It must also be given to the standalone
-validator for those plans; policy-valid late plans can violate assignment arrival
-deadlines and are explicitly labeled. Strict is the default. A valid empty/partial
-plan can perform poorly; validation does not prove optimality or actual safety.
+## Project notes
 
---compare writes separate csp/ and nearest/ subdirectories beneath --output-dir.
-Script runs also export their commitments. Diagnostic --route writes no plan or
-statistics because it does not execute incident assignments. Existing default
-all-open routing and Bayesian-only UCS remain available for comparisons.
-
-Saved strict/late examples for all three scenarios are under results/plans/;
-results/plan_export_validation.json records original-data standalone replay and
-matching simulation statistics. To regenerate all six sets:
-
-```powershell
-foreach ($scenarioNumber in 1..3) {
-    .\.venv\Scripts\python.exe run.py "Scenarios/Scenario$scenarioNumber" --routing-policy bayesian --block-threshold .2 --traffic-policy hmm-bounded --max-extra-fraction .05 --min-exposure-reduction .10 --output-dir "results/plans/Scenario$scenarioNumber/strict"
-    .\.venv\Scripts\python.exe run.py "Scenarios/Scenario$scenarioNumber" --routing-policy bayesian --block-threshold .2 --traffic-policy hmm-bounded --max-extra-fraction .05 --min-exposure-reduction .10 --allow-late --output-dir "results/plans/Scenario$scenarioNumber/allow_late"
-}
-```
+- [Code guide](CODE_GUIDE.md) follows a run through the main files.
+- [Design](DESIGN.md) explains the rules, formulas and assumptions.
+- [Testing](TESTING.md) records the tests and benchmark results.
+- [LLM notes](LLM_NOTES.md) record what we accepted, corrected and tested, including the exact first prompt.
+- [Data schema](DATA_SCHEMA.md) is an optional reference for input fields and validation rules.

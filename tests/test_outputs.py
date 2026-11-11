@@ -61,9 +61,9 @@ class OutputTests(unittest.TestCase):
                             self.assertEqual((validation.statistics.handled,validation.statistics.deadlines_met),expected[(number,strict)])
                             self.assertLess(validation.statistics.responders_used,validation.statistics.handled)
                             text=Path(exported["statistics"]).read_text(encoding="utf-8")
-                            self.assertIn(f"* {validation.statistics.handled} incidents handled",text)
-                            self.assertIn(f"* Average response time: {validation.statistics.average_response_seconds} s",text)
-                            self.assertIn(f"* Deadlines met: {validation.statistics.deadlines_met_percent_all}%",text)
+                            self.assertIn(f"Incidents handled: {validation.statistics.handled} of {validation.statistics.total_incidents}",text)
+                            self.assertIn(f"Average response time: {validation.statistics.average_response_seconds:.1f} seconds",text)
+                            self.assertIn(f"Reached on time: {validation.statistics.deadlines_met} of {validation.statistics.total_incidents} ({validation.statistics.deadlines_met_percent_all:.1f}%)",text)
                             self.assertIn("Run configuration:",text)
 
     def test_export_start_is_departure_not_release_or_arrival(self):
@@ -73,7 +73,7 @@ class OutputTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests") as directory:
             files=write_outputs(scenario,result,directory)
             text=Path(files["statistics"]).read_text(encoding="utf-8")
-            self.assertIn("* Average response time: 7.0 s",text)
+            self.assertIn("Average response time: 7.0 seconds",text)
             self.assertEqual(files["validation"]["assignments"][0]["completion_time"],10)
 
     def test_unhandled_and_empty_stream_have_explicit_denominators(self):
@@ -85,7 +85,7 @@ class OutputTests(unittest.TestCase):
                 self.assertEqual(load_plan(files["plan"]),[])
                 text=Path(files["statistics"]).read_text(encoding="utf-8")
                 self.assertIn("Average response time: N/A",text)
-                self.assertIn("Deadlines met: 0.0%" if incidents else "Deadlines met: N/A",text)
+                self.assertIn("Reached on time: 0 of 1 (0.0%)" if incidents else "Reached on time: 0 of 0 (N/A (no incidents))",text)
 
     def test_tampered_timing_and_summary_refused_before_writing(self):
         scenario,graph=fixture([incident()])
@@ -108,9 +108,9 @@ class OutputTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests") as directory:
             files=write_outputs(scenario,result,directory)
             text=Path(files["statistics"]).read_text(encoding="utf-8")
-            self.assertIn("under selected policy: VALID",text)
-            self.assertIn("Every assigned arrival meets its deadline: no",text)
-            self.assertIn("experimental; permits assignment-deadline violations",text)
+            self.assertIn("Plan check: Passed",text)
+            self.assertIn("Reached late: 1",text)
+            self.assertIn("Mode: Late arrivals allowed",text)
 
 
 class OutputCLITests(unittest.TestCase):
