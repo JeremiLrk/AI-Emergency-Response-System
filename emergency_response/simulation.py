@@ -10,6 +10,7 @@ from heapq import heappop, heappush
 from itertools import count
 from math import fsum, isfinite
 
+from .diagnostics import DecisionEvidence, explain_unhandled, record_check
 from .graph import Graph
 from .models import Scenario
 from .search import ucs
@@ -69,7 +70,7 @@ class _Simulator:
     Postconditions: state transitions and commitments are recorded in isolated state.
     """
 
-    def __init__(self, scenario, graph, dispatcher, strict_deadlines, decision_times, route_planner=None):
+    def __init__(self, scenario, graph, dispatcher, strict_deadlines, decision_times, route_planner=None, record_diagnostics=True):
         """Create isolated engine state and a private copy of the routing graph.
 
         Parameters:
@@ -80,6 +81,7 @@ class _Simulator:
             strict_deadlines: bool; True forbids late dispatch and closes missed
                 pending work, False leaves missed work eligible for later response.
             decision_times: Explicit optional wake-up times, unrelated to hidden input.
+            record_diagnostics: Boolean enabling read-only decision evidence.
             route_planner: Optional callable(graph,start,goal,max_seconds=...);
                 receives a strict arrival-duration budget, never future incidents.
         Preconditions: input IDs/field consistency follow load_scenario; duplicate
@@ -89,6 +91,11 @@ class _Simulator:
         """
         if not isinstance(strict_deadlines, bool) or not callable(dispatcher):
             raise ValueError("Expected bool strict_deadlines and callable dispatcher")
+        if not isinstance(record_diagnostics, bool):
+            raise ValueError("record_diagnostics must be bool")
+        self.record_diagnostics = record_diagnostics
+        self.histories = {}
+        self.decision_index = 0
         self.dispatcher = dispatcher
         if route_planner is not None and not callable(route_planner):
             raise ValueError("route_planner must be callable or None")
@@ -208,10 +215,11 @@ class _Simulator:
         else:
             raise ValueError(f"Unknown internal event: {kind}")
 
-    def _snapshot(self):
+    def _snapshot(self, checks=None):
         """Build an immutable current-time decision view and immediate UCS candidates.
 
-        Parameters: self is initialized engine with all due state changes applied.
+        Parameters: self is initialized engine with all due state changes applied;
+            checks is an optional list collecting existing eligibility results.
         Preconditions: source graph fixed; only revealed pending work is considered.
         Postconditions: returns no future incidents, event queue or engine reference.
             Candidates obey capabilities, availability, connectivity and selected
@@ -221,11 +229,15 @@ class _Simulator:
         responders = tuple(self.responders[key].view for key in sorted(self.responders))
         incidents = tuple(self.revealed[key] for key in sorted(self.revealed))
         for responder in responders:
-            if responder.status != "available":
-                continue
             for view in incidents:
                 incident = view.incident
-                if view.status != "pending" or incident.required_capability not in responder.capabilities:
+                if view.status != "pending":
+                    continue
+                if incident.required_capability not in responder.capabilities:
+                    record_check(checks, responder, incident, "lacks_capability")
+                    continue
+                if responder.status != "available":
+                    record_check(checks, responder, incident, "busy")
                     continue
                 if self.route_planner is None:
                     route = ucs(self.graph, responder.location, incident.location)
@@ -241,11 +253,16 @@ class _Simulator:
                             _add_time(self.now, route.seconds) > incident.deadline):
                         route = ucs(self.graph, responder.location, incident.location)
                 if route is None:
+                    record_check(checks, responder, incident, "no_route", route_exists=False)
                     continue
                 arrival = _add_time(self.now, route.seconds)
                 on_time = arrival <= incident.deadline
                 if self.strict and not on_time:
+                    record_check(checks, responder, incident, "late", route_exists=True,
+                                 arrival_time=arrival, on_time=False)
                     continue
+                record_check(checks, responder, incident, "eligible", route_exists=True,
+                             arrival_time=arrival, on_time=on_time, eligible=True)
                 completion = _add_time(arrival, incident.time_required)
                 candidates.append(Candidate(responder.id, incident.id, route, arrival, completion, on_time))
         return DecisionSnapshot(self.now, responders, incidents, tuple(candidates), self.strict)
@@ -362,8 +379,30 @@ class _Simulator:
                         deadlines.add(entity)
                     else:
                         self._apply(kind, entity)
-                snapshot = self._snapshot()
+                checks = [] if self.record_diagnostics else None
+                snapshot = self._snapshot(checks)
+                before = len(self.assignments)
+                solver_records = getattr(self.dispatcher, "diagnostics", ())
+                solver_before = len(solver_records)
                 self._dispatch(snapshot)
+                if self.record_diagnostics:
+                    # Observe only this committed batch, including repeated decisions
+                    # at one timestamp. Never call the dispatcher or router again.
+                    solver_records = getattr(self.dispatcher, "diagnostics", ())
+                    solver = solver_records[-1] if len(solver_records) > solver_before else None
+                    selected = tuple((a.responder_id, a.incident_id)
+                                     for a in self.assignments[before:])
+                    by_incident = {}
+                    for check in checks:
+                        by_incident.setdefault(check.incident_id, []).append(check)
+                    for view in snapshot.incidents:
+                        if view.status == "pending":
+                            self.histories.setdefault(view.incident.id, []).append(DecisionEvidence(
+                                self.decision_index, snapshot.time, view.incident.deadline,
+                                tuple(by_incident.get(view.incident.id, ())), selected,
+                                getattr(solver, "status", None),
+                                getattr(solver, "lexicographic_optimal", None)))
+                    self.decision_index += 1
                 if not self.queue or self.queue[0][0] != self.now:
                     break
                 # A same-time dispatch requires real state progress: each job commits
@@ -376,11 +415,12 @@ class _Simulator:
                 self._close(incident_id, "no_more_events_unassigned")
         final = self._snapshot()
         return SimulationResult(self.now, self.strict, tuple(self.assignments),
-            final.responders, final.incidents, tuple(self.log))
+            final.responders, final.incidents, tuple(self.log),
+            explain_unhandled(final.incidents, self.histories) if self.record_diagnostics else ())
 
 
 def simulate(scenario: Scenario, graph: Graph, dispatcher, *, strict_deadlines=True,
-             decision_times=(), route_planner=None):
+             decision_times=(), route_planner=None, record_diagnostics=True):
     """Execute scripted/callback dispatches using deterministic route estimates.
 
     Parameters:
@@ -392,6 +432,9 @@ def simulate(scenario: Scenario, graph: Graph, dispatcher, *, strict_deadlines=T
         strict_deadlines: True baseline rejects predicted late arrival and closes
             pending missed work. False permits late candidates and later responses;
             all arrivals still receive independent met/missed results.
+        record_diagnostics: True records existing checks and committed batches for
+            unhandled explanations; False disables this observer for comparisons.
+            No extra routes or allocations are computed in either mode.
         decision_times: Optional explicit nonnegative wake-ups for scripted tests;
             normal releases/arrivals/completions/deadlines already trigger decisions.
         route_planner: Optional independent routing callable; None preserves UCS.
@@ -414,4 +457,4 @@ def simulate(scenario: Scenario, graph: Graph, dispatcher, *, strict_deadlines=T
         ValueError: Invalid policy/time/dispatch batch or unrepresentable time advance.
         Dispatcher exceptions propagate; an invalid run is not returned as success.
     """
-    return _Simulator(scenario, graph, dispatcher, strict_deadlines, decision_times, route_planner).run()
+    return _Simulator(scenario, graph, dispatcher, strict_deadlines, decision_times, route_planner, record_diagnostics).run()

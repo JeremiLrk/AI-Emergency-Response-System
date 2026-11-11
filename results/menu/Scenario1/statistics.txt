@@ -1,18 +1,24 @@
 Emergency response results | Scenario1
 Mode: Strict deadlines
 
+--------------------------------------------------------
 Overview
+--------------------------------------------------------
   Incidents handled: 6 of 7
   Incidents not handled: 1
   Responders used: 4
   Average response time: 91.1 seconds
 
+--------------------------------------------------------
 Arrival deadlines
+--------------------------------------------------------
   Reached on time: 6 of 7 (85.7%)
   Reached late: 0
   The on-time percentage includes every incident, even those not handled.
 
+--------------------------------------------------------
 Incidents handled by priority
+--------------------------------------------------------
   Critical: 2 of 2 handled
   High: 4 of 5 handled
   Medium: 0 of 0 handled
@@ -21,14 +27,19 @@ Incidents handled by priority
   Critical incidents not handled: None
   All incidents not handled: I7
 
+--------------------------------------------------------
 How to read these numbers
+--------------------------------------------------------
   Handled means a responder completed treatment.
   The deadline is the latest time a responder can arrive and still be on time.
   Average response time includes waiting and travel for handled incidents only.
 
+--------------------------------------------------------
 Plan check: Passed under the selected rules and estimated travel times.
 
+--------------------------------------------------------
 Run configuration:
+--------------------------------------------------------
   Scenario: Scenario1
   Deadline rule: Strict deadlines
   Responder assignment: CP-SAT (assign by priority)
@@ -38,3 +49,20 @@ Run configuration:
   Maximum extra travel time: 5%
   Minimum reduction in traffic exposure: 10%
   Solver time limit per decision: 2 seconds
+
+--------------------------------------------------------
+Why incidents were not handled
+--------------------------------------------------------
+Times are seconds from the start. Arrival times are estimates.
+These reasons describe this run. Different earlier assignments could change the result.
+
+--------------------------------------------------------
+Incident I7
+  Reason: Every arrival time checked was after the deadline.
+  Arrival deadline: 200.0 seconds.
+  Best arrival checked: 212.0 seconds, by R3.
+  Too late by: 12.0 seconds.
+  During some checks, responders with the right skill were busy.
+  Outcome: Not sent; the strict deadline rule closed this incident.
+
+Full check-by-check details are available in the simulation result and command-line JSON.

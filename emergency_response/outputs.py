@@ -8,6 +8,7 @@ from dataclasses import asdict
 import json
 from pathlib import Path
 
+from .diagnostics import render_explanations
 from .plan_validation import validate_plan
 from .statistics import summarize
 
@@ -26,12 +27,13 @@ def make_plan(result):
              "path":list(a.route.nodes),"time":a.departure_time} for a in result.assignments]
 
 
-def render_statistics(statistics, validation, *, configuration, incidents):
+def render_statistics(statistics, validation, *, configuration, incidents, explanations=()):
     """Summarize coverage, deadlines and response time in plain language.
 
     Parameters: statistics comes from the final simulation. validation is the
         matching successful replay. configuration records the run settings.
-        incidents contains every incident from the original scenario.
+        incidents contains every incident from the original scenario; explanations
+        contains optional observed histories, separate from all existing metrics.
     Preconditions: the simulation and independent replay agree.
     Postconditions: returns report text with rounded display values, counts
         by priority and the original run settings for reproducing the plan.
@@ -53,18 +55,24 @@ def render_statistics(statistics, validation, *, configuration, incidents):
         f"Emergency response results | {configuration.get('scenario', 'Scenario')}",
         f"Mode: {mode}",
         "",
+        "--------------------------------------------------------",
         "Overview",
+        "--------------------------------------------------------",
         f"  Incidents handled: {statistics.handled} of {statistics.total_incidents}",
         f"  Incidents not handled: {statistics.unhandled}",
         f"  Responders used: {statistics.responders_used}",
         f"  Average response time: {average}",
         "",
+        "--------------------------------------------------------",
         "Arrival deadlines",
+        "--------------------------------------------------------",
         f"  Reached on time: {statistics.deadlines_met} of {statistics.total_incidents} ({deadline_percentage})",
         f"  Reached late: {late}",
         "  The on-time percentage includes every incident, even those not handled.",
         "",
+        "--------------------------------------------------------",
         "Incidents handled by priority",
+        "--------------------------------------------------------",
     ]
     for priority in ("Critical", "High", "Medium", "Low"):
         handled = statistics.handled_by_priority[priority]
@@ -80,18 +88,24 @@ def render_statistics(statistics, validation, *, configuration, incidents):
         "  Critical incidents not handled: " + (", ".join(missed_critical) or "None"),
         "  All incidents not handled: " + (", ".join(sorted(unhandled)) or "None"),
         "",
+        "--------------------------------------------------------",
         "How to read these numbers",
+        "--------------------------------------------------------",
         "  Handled means a responder completed treatment.",
         "  The deadline is the latest time a responder can arrive and still be on time.",
         "  Average response time includes waiting and travel for handled incidents only.",
         "",
+        "--------------------------------------------------------",
         "Plan check: Passed under the selected rules and estimated travel times.",
         "",
+        "--------------------------------------------------------",
         "Run configuration:",
+        "--------------------------------------------------------",
         f"  Scenario: {configuration.get('scenario', 'Unspecified')}",
         f"  Deadline rule: {mode}",
     ])
 
+    # Keep all existing report content and metrics intact; append diagnostics below.
     allocator = configuration.get("allocator")
     if allocator is not None:
         names = {"csp": "CP-SAT (assign by priority)", "nearest": "Nearest responder", "script": "Scripted assignments"}
@@ -121,6 +135,11 @@ def render_statistics(statistics, validation, *, configuration, incidents):
     time_limit = configuration.get("solver_time_limit_seconds")
     if time_limit is not None and allocator == "csp":
         lines.append(f"  Solver time limit per decision: {time_limit:g} seconds")
+    if unhandled:
+        if explanations:
+            lines.extend(render_explanations(explanations))
+        else:
+            lines.extend(["", "Unhandled decision details: unavailable for this result."])
     return "\n".join(lines) + "\n"
 
 
@@ -167,7 +186,8 @@ def write_outputs(scenario, result, output_directory, *, routing_policy="baselin
                     strict_deadlines=result.strict_deadlines)
     plan_text = json.dumps(plan,indent=2,allow_nan=False)+"\n"
     statistics_text = render_statistics(
-        statistics, validation, configuration=settings, incidents=scenario.incidents
+        statistics, validation, configuration=settings, incidents=scenario.incidents,
+        explanations=result.unhandled_explanations
     )
     destination = Path(output_directory)
     destination.mkdir(parents=True,exist_ok=True)

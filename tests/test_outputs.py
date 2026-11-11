@@ -65,6 +65,15 @@ class OutputTests(unittest.TestCase):
                             self.assertIn(f"Average response time: {validation.statistics.average_response_seconds:.1f} seconds",text)
                             self.assertIn(f"Reached on time: {validation.statistics.deadlines_met} of {validation.statistics.total_incidents} ({validation.statistics.deadlines_met_percent_all:.1f}%)",text)
                             self.assertIn("Run configuration:",text)
+                            critical_total = sum(i.priority == "Critical" for i in scenario.incidents)
+                            critical_handled = validation.statistics.handled_by_priority["Critical"]
+                            self.assertIn(f"Critical: {critical_handled} of {critical_total} handled", text)
+                            expected_all = "Yes" if critical_handled == critical_total else "No"
+                            self.assertIn(f"All Critical incidents handled: {expected_all}", text)
+                            critical_missing = sorted(i.id for i in scenario.incidents
+                                if i.priority == "Critical" and i.id in validation.unhandled_incident_ids)
+                            expected_missing = ", ".join(critical_missing) or "None"
+                            self.assertIn(f"Critical incidents not handled: {expected_missing}", text)
 
     def test_export_start_is_departure_not_release_or_arrival(self):
         scenario,graph=fixture([incident(timestamp=1,deadline=100)])
@@ -85,6 +94,7 @@ class OutputTests(unittest.TestCase):
                 self.assertEqual(load_plan(files["plan"]),[])
                 text=Path(files["statistics"]).read_text(encoding="utf-8")
                 self.assertIn("Average response time: N/A",text)
+                self.assertIn("All Critical incidents handled: No Critical incidents in this scenario", text)
                 self.assertIn("Reached on time: 0 of 1 (0.0%)" if incidents else "Reached on time: 0 of 0 (N/A (no incidents))",text)
 
     def test_tampered_timing_and_summary_refused_before_writing(self):
@@ -124,6 +134,46 @@ class OutputCLITests(unittest.TestCase):
         with patch("sys.argv",["run.py",str(ROOT/"Scenarios/Scenario1"),"--output-dir",str(directory),*options]),contextlib.redirect_stdout(stream):
             run.main()
         return json.loads(stream.getvalue())
+
+    def test_menu_runs_all_scenarios_and_prints_the_saved_files(self):
+        """Exercise real menu, inference, allocation, replay and export together."""
+        original_writer = run.write_outputs
+        expected_handled = {1: 6, 2: 11, 3: 13}
+        for number in (1, 2, 3):
+            with self.subTest(scenario=number), tempfile.TemporaryDirectory(dir=ROOT / "tests") as directory:
+                def redirected_writer(scenario, result, output_directory, **options):
+                    return original_writer(scenario, result, directory, **options)
+
+                stream = io.StringIO()
+                with patch("sys.argv", ["run.py"]), patch("builtins.input", return_value=str(number)), \
+                     patch("run.write_outputs", side_effect=redirected_writer), contextlib.redirect_stdout(stream):
+                    run.main()
+
+                printed = stream.getvalue()
+                for name in ("plan.json", "statistics.txt"):
+                    text = (Path(directory) / name).read_text(encoding="utf-8")
+                    self.assertIn(text.rstrip(), printed)
+                report = (Path(directory) / "statistics.txt").read_text(encoding="utf-8")
+                self.assertIn(f"Incidents handled: {expected_handled[number]} of", report)
+                self.assertIn("Responder assignment: CP-SAT", report)
+                self.assertIn("Road estimates: Bayesian", report)
+                self.assertIn("Road blockage cutoff: 20%", report)
+                self.assertIn("Maximum extra travel time: 5%", report)
+                self.assertIn("Minimum reduction in traffic exposure: 10%", report)
+                self.assertIn("Mode: Strict deadlines", report)
+                self.assertEqual(len(load_plan(Path(directory) / "plan.json")), expected_handled[number])
+
+    def test_menu_invalid_choice_exit_and_end_of_input(self):
+        """Invalid input is retried, while exit and closed input end cleanly."""
+        for answers in (["bad", "0"], [EOFError()], [KeyboardInterrupt()]):
+            stream = io.StringIO()
+            with self.subTest(answers=answers), patch("sys.argv", ["run.py"]), \
+                 patch("builtins.input", side_effect=answers), patch("run.write_outputs") as writer, \
+                 contextlib.redirect_stdout(stream):
+                run.main()
+                writer.assert_not_called()
+            if answers[0] == "bad":
+                self.assertIn("Please enter 1, 2, 3 or 0.", stream.getvalue())
 
     def test_normal_and_comparison_outputs_match_stdout(self):
         with tempfile.TemporaryDirectory(dir=ROOT / "tests") as directory:

@@ -367,9 +367,9 @@ class Scenario:
     def known_incidents(self, now):
         """Return incidents released at or before now, in simulation seconds.
 
-        Loading the full file does not authorize looking ahead. A future controller must
-        use this view when planning. This method does not filter completed or expired
-        incidents; tracking those requires simulation state, which is not implemented.
+        Loading the full file does not authorize looking ahead. This view filters
+        only by release time. The event simulator separately tracks whether a
+        revealed incident is pending, assigned, completed or closed.
 
         Parameters:
             self: The Scenario instance receiving the call; passed automatically by Python.

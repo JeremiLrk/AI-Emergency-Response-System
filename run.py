@@ -91,8 +91,9 @@ def main():
         runs both independently on the same graph. --simulate-script preserves
         fixtures; --route is route-only. --allow-late applies to execution modes.
         --solver-time-limit is a shared per-decision wall budget (default 2s).
-        --output-dir selects required plan.json/statistics.txt destination (default
-        current working directory); compare uses csp/nearest subdirectories.
+        With no arguments, the menu uses the full pipeline and saves beneath
+        results/menu/ScenarioN. Explicit runs use the current directory unless
+        --output-dir is supplied; compare uses csp/nearest subdirectories.
     Preconditions: files readable, OR-Tools installed for CSP/compare, finite budget.
         Bayesian routing always requires an explicit --block-threshold. Mode/flag
         conflicts are checked rather than silently ignored.

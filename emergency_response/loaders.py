@@ -372,8 +372,8 @@ def load_scenario(directory) -> Scenario:
     obvious incident infeasibility are retained as warnings so valid data remains
     inspectable. Busy with zero remaining duration is allowed as ready at time zero.
 
-    The future planner must use Scenario.known_incidents(now); merely parsing future
-    records must not influence dispatch before release. Input records and probability
+    Scenario.known_incidents(now) provides a release-filtered input view. The event
+    simulator reveals calls through release events before dispatch. Input records and probability
     tables should be treated as read-only after loading.
 
     Raises:

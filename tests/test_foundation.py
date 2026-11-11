@@ -94,6 +94,14 @@ class SearchTests(unittest.TestCase):
         self.assertEqual(ucs(g, "S", "G").roads, ("fast",))
         self.assertEqual(ucs(g, "S", "S").seconds, 0)
 
+    def test_overflow_is_reported_instead_of_unreachable(self):
+        """An unrepresentable path sum must raise a diagnostic."""
+        graph = Graph(["A", "B", "C"])
+        graph.add_edge("A", "B", 1e308, "AB")
+        graph.add_edge("B", "C", 1e308, "BC")
+        with self.assertRaisesRegex(ValueError, "overflow"):
+            ucs(graph, "A", "C")
+
     def test_bad_inputs(self):
         """Reject inputs that violate graph identity or nonnegative finite-cost rules.
 

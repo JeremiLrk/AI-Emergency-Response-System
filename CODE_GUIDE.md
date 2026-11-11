@@ -137,3 +137,8 @@ python -m unittest discover -s tests -v
 ```
 
 [Full testing notes](TESTING.md)
+
+
+## Explanations for unhandled calls
+
+`diagnostics.py` stores frozen copies of the eligibility checks the simulator already makes. It never searches for another route or allocates another responder. `simulate` records checks before dispatch and the actual committed batch afterwards. Busy or unskilled responders have route and arrival fields set to None, meaning not checked. `SimulationResult.unhandled_explanations` contains summaries and complete histories only for unhandled calls. `statistics.txt` shows a shorter version, and explicit CLI JSON includes the complete records. These records describe this run; they do not prove that every possible allocation would fail. Set `record_diagnostics=False` only when you want a recording-off comparison.

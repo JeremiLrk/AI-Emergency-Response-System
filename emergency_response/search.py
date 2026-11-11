@@ -6,6 +6,7 @@ change. Optimality applies to these supplied costs, not unknown true conditions.
 from dataclasses import dataclass
 from heapq import heappop, heappush
 from itertools import count
+from math import isfinite
 
 from .graph import Graph
 
@@ -47,7 +48,7 @@ def ucs(graph: Graph, start: str, goal: str) -> Route | None:
         Returns None if unreachable; start == goal yields a zero-cost one-node route.
 
     Raises:
-        ValueError: Either endpoint is absent from the graph.
+        ValueError: Either endpoint is absent, or an explored travel sum overflows.
 
     The course's UCS frontier priority is cumulative cost g(n), with no heuristic.
     best stores cheapest discovered costs; parent stores the predecessor and road
@@ -98,6 +99,8 @@ def ucs(graph: Graph, start: str, goal: str) -> Route | None:
         # Relax each outgoing arc: keep only a strictly better cumulative cost.
         for edge in graph.neighbors(node):
             candidate = cost + edge.seconds
+            if not isfinite(candidate):
+                raise ValueError("Route travel time overflow")
             # Strict < also prevents equal-cost cycles from being re-enqueued forever.
             if candidate < best.get(edge.target, float("inf")):
                 best[edge.target] = candidate

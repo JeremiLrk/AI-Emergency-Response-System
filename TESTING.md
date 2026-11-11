@@ -1,4 +1,86 @@
-# Verification of this checkpoint
+# Testing the project
+
+## Run every test with one command
+
+Open a terminal in the repository folder. Use the same environment as the program.
+
+On Windows with the project environment:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+If the environment is already active:
+
+```console
+python -m unittest discover -s tests -v
+```
+
+The command finds every test file in `tests/` and runs it. It currently runs **160 tests**. The menu has its own regression check, and that check exercises all three scenarios. Some individual tests contain many examples, so the test count is smaller than the number of checked cases.
+
+`ok` means a test passed. `FAIL` means an assertion did not match the expected result. `ERROR` means a test could not finish because an exception occurred. A successful run ends with `Ran 160 tests` and `OK`. Runtime varies by machine.
+
+For a shorter summary, replace `-v` with `-q`. To run just the HMM tests:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p test_hmm.py -v
+```
+
+Temporary test files are created beneath `tests/` and removed automatically. The menu test redirects exports to a temporary directory, so it can check real output without replacing saved scenario results.
+
+## What the tests check
+
+| Test file | Tests | What they check |
+| --- | ---: | --- |
+| `test_foundation.py` | 6 | Basic UCS paths, directed and parallel roads, zero-cost cycles, invalid inputs, raw readers and travel-sum overflow. |
+| `test_scenarios.py` | 12 | Actual schemas and counts, units, capabilities, initial availability, release visibility, and rejected or warned-about broken input. All 845 ordered node pairs are compared with a separate Bellman–Ford calculation. |
+| `test_bayesian.py` | 11 | Worked probabilities, missing reports and weather, conflicting reports, directionality and unchanged input. |
+| `test_risk_routing.py` | 11 | Road cutoffs, conditional travel estimates, risk bounds, directionality, search integration and CLI options. |
+| `test_hmm.py` | 8 | The real five-step example, independent sums over hidden sequences, scenario priors, directed histories, validation and long-sequence normalization. |
+| `test_traffic_routing.py` | 11 | Exact and near time ties, bounded detours, exposure reduction, multiple route labels, search limits, exhaustive path checks and actual simulator durations. |
+| `test_diagnostics.py` | 12 | Changing reasons, competing assignments, missing skills and routes, no responders, pre-release deadlines, late candidates, solver budget exhaustion, no extra search/dispatch calls, same-time decisions, exports, and identical recording-on/off execution for all three scenarios. |
+| `test_simulation.py` | 27 | Release times, simultaneous events, busy responders, travel and treatment, later locations, zero-duration jobs, deadlines, invalid dispatch batches and current-only snapshots. |
+| `test_scripted.py` | 6 | Script structure, time ordering, simultaneous requests, consuming a timestamp once, and CLI execution and errors. |
+| `test_allocation.py` | 21 | Priority order, exclusivity, responder choice, response-time objectives, small exhaustive models, real scenarios and solver statuses or time limits. |
+| `test_statistics.py` | 9 | Waiting time in response, late completions, unhandled work, empty denominators, and default or comparison CLI results. |
+| `test_plan_validation.py` | 14 | Independent replay, duplicate calls, skills, release, availability, directed routes, location updates, treatment, deadlines, bad JSON and model settings. |
+| `test_outputs.py` | 12 | Exact plan fields and start times, file contents, strict and late plans in all scenarios, bad timing rejection, Critical coverage text, menu choices and console output, comparison folders and validator exit codes. |
+
+## Why these tests are useful
+
+Several expected answers come from calculations separate from the code being tested. Examples include hand-calculated probabilities, enumerating possible hidden states, checking routes with Bellman–Ford, and enumerating small route and assignment choices.
+
+The integration tests then connect those parts. They check that a selected route's travel seconds determine arrival and treatment completion, that responders cannot be assigned twice, and that exported files match the original-data replay.
+
+Solver status tests deliberately simulate time limits and different statuses. This makes those branches repeatable instead of depending on how fast a particular computer is.
+
+The text-format checks use the displayed rounding. They also compare the underlying full-precision statistics with independent replay. The Critical summary checks counts, the all-handled answer and the IDs of missed Critical calls.
+
+## Current review results
+
+The November 2026 code review first reran all 145 existing tests and checked the source and documentation. It then added three focused tests, bringing the total to **148**, and strengthened assertions in existing export tests.
+
+The new checks cover the complete no-argument scenario menu, invalid input and clean exit, and overflow in a scalar UCS path sum. A sum that is too large now raises a clear error. Previously it could look like an unreachable destination. The supplied scenarios do not approach that numeric limit.
+
+The current suite passed all 148 tests. The project dependency check also passed with:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip check
+```
+
+## What a passing suite can establish
+
+Passing tests support the stated behaviour for these cases. They do not measure real-world road safety or prediction accuracy. Bayesian inference is shared by planning and replay, so the separate arithmetic tests are important. There is no measured line or branch coverage percentage, and this review makes no claim of 100% coverage.
+
+The solver handles the current snapshot. A proven current decision does not prove best coverage across a whole future scenario. The HMM uses old readings, and the simulation has no sampled road blockage or recovery event.
+
+The bounded route search has an explicit label limit for larger graphs. Unit tests exercise that error, while the supplied graphs are small. The tests verify that the allocator sees only released incidents. Arbitrary Python callbacks could still read external files themselves.
+
+## Earlier development stages and measured comparisons
+
+The sections below keep the original test counts and results as development history. Their statements about what was still missing apply to those earlier checkpoints. The current run command and current test count are given above.
+
+### Original foundation checkpoint
 
 Run from the repository root with Python 3.10+:
 
@@ -419,3 +501,14 @@ prompt page), prominent GitHub link, required repository access/submission and
 oral defence preparation remain deliverables. Real road-failure recovery/live
 traffic/optimal full-horizon planning are documented limitations, not additional
 mandatory features invented by this task.
+
+
+## Diagnostic feature verification
+
+All 160 tests pass after adding the explanation feature (148 existing tests plus 12 new tests). The actual-scenario regression test runs all three scenarios in strict and late mode with the approved Bayesian/HMM-bounded policy, then compares recording on with recording off. It compares complete assignments, arrivals, completions, final states, event logs, plans and every original statistic. No differences are allowed.
+
+We also saved 48 runs from the code before this change and compared them with the updated code: three scenarios, strict/late deadlines, CSP/nearest allocation, and all-open/Bayesian-only/HMM-tie/HMM-bounded routing. Every existing execution field and statistic matched exactly. This was a development-time before/after check, not a new planning algorithm or benchmark policy.
+
+Small fixtures check a busy responder becoming free too late, an eligible High call losing its responder to a Critical call, a missing skill, a disconnected directed graph, no responders, a deadline before release, late-only candidates, zero solver budget, and repeated decisions at the same timestamp. A search-call spy and captured dispatcher snapshots verify that diagnostic recording adds no search or dispatcher calls. Export tests keep the plan schema and independently replayed metrics unchanged. No test claims that these histories prove failure under all possible allocations.
+
+The diagnostic display checks also verify plain-language lateness, a short per-incident summary, and the absence of the earlier technical candidate label. Full histories and planning behaviour are unchanged.

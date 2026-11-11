@@ -1,18 +1,24 @@
 Emergency response results | Scenario3
 Mode: Late arrivals allowed
 
+--------------------------------------------------------
 Overview
+--------------------------------------------------------
   Incidents handled: 20 of 20
   Incidents not handled: 0
   Responders used: 10
   Average response time: 1408.2 seconds
 
+--------------------------------------------------------
 Arrival deadlines
+--------------------------------------------------------
   Reached on time: 11 of 20 (55.0%)
   Reached late: 9
   The on-time percentage includes every incident, even those not handled.
 
+--------------------------------------------------------
 Incidents handled by priority
+--------------------------------------------------------
   Critical: 8 of 8 handled
   High: 8 of 8 handled
   Medium: 4 of 4 handled
@@ -21,14 +27,19 @@ Incidents handled by priority
   Critical incidents not handled: None
   All incidents not handled: None
 
+--------------------------------------------------------
 How to read these numbers
+--------------------------------------------------------
   Handled means a responder completed treatment.
   The deadline is the latest time a responder can arrive and still be on time.
   Average response time includes waiting and travel for handled incidents only.
 
+--------------------------------------------------------
 Plan check: Passed under the selected rules and estimated travel times.
 
+--------------------------------------------------------
 Run configuration:
+--------------------------------------------------------
   Scenario: Scenario3
   Deadline rule: Late arrivals allowed
   Responder assignment: CP-SAT (assign by priority)

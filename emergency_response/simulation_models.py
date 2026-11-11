@@ -6,6 +6,7 @@ store values; the simulator checks transitions and constructs validated views.
 """
 from dataclasses import dataclass
 
+from .diagnostics import UnhandledExplanation
 from .models import Incident
 from .search import Route
 
@@ -185,6 +186,8 @@ class SimulationResult:
         responders: Final immutable operational states.
         incidents: Final states with deadline results tracked independently.
         events: Processed transition log, excluding irrelevant queued deadlines.
+        unhandled_explanations: Optional diagnostic histories, excluded from planning
+            and metrics. Empty for older manually constructed or recording-off results.
     Preconditions:
         Created after the event queue is drained and remaining pending work closed.
     Postconditions:
@@ -197,3 +200,4 @@ class SimulationResult:
     responders: tuple[ResponderView, ...]
     incidents: tuple[IncidentView, ...]
     events: tuple[SimulationEvent, ...]
+    unhandled_explanations: tuple[UnhandledExplanation, ...] = ()
