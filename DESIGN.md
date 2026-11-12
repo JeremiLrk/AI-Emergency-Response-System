@@ -1,107 +1,114 @@
-# How the system makes decisions
+# Why the system works this way
 
-The program plans emergency responses on a city map after a storm. It loads and checks the scenario files, estimates road conditions, finds routes, assigns responders, and simulates travel and treatment. It then writes the assignment files and checks them by replaying the plan from the original data.
+This document explains the rules we chose and what they mean. [CODE_GUIDE.md](CODE_GUIDE.md) shows where those rules are implemented. [TESTING.md](TESTING.md) explains how we checked them and what happened on the three scenarios.
 
-The design uses the assignment PDF (pages 1–6), the course slides on search, CSP, Bayesian networks and HMMs, and all seven files in each of the three scenarios. [Scenarios/README.md](Scenarios/README.md) explains the units and timing. [DATA_SCHEMA.md](DATA_SCHEMA.md) lists the exact input fields and counts.
+## The normal run in one minute
 
-## From input to dispatch
+| Question | Current answer |
+| --- | --- |
+| Which roads can be used? | Roads with less than 20% estimated blockage probability. |
+| What determines travel time? | Bayesian Open/Congested probabilities, assuming the road is passable. |
+| What does the HMM change? | Route preference; it never adds another slowdown to travel time. |
+| Who gets help first? | Critical, then High, Medium and Low, before minimizing response time. |
+| Can responders arrive late? | Not in the default run. The separate allow-late option permits it. |
+| What happens after treatment? | The responder becomes free at that incident location. |
+| Does the planner know future calls? | No. It sees calls only after release. |
+| Are arrivals guaranteed? | No. The simulation follows estimates and does not execute real road failures. |
 
-1. `load_scenario` reads the files into a `Scenario`. The input records are frozen dataclasses. Their nested probability and history dictionaries should also be treated as read-only.
-2. `infer_scenario` calculates three road-condition probabilities per directed road. `build_bayesian_graph` filters roads and gives the usable roads estimated travel times. The all-open graph is available as a comparison.
-3. `infer_traffic` processes each road's historical traffic readings. A traffic-aware route planner can use those results as a separate preference when searching.
-4. The simulator releases incidents at their timestamps. It builds possible assignments for the currently available responders. The allocator receives only the current decision, then returns responder and incident IDs.
-5. The simulator carries out the assignments. The exporter writes the plan and statistics after independent validation.
+The rest of this guide explains those answers. Sections 2–4 cover roads and traffic; 5–6 cover time and assignments; 7–8 cover outputs and explanations. Section 10 lists ideas that are still proposals.
 
-Search works with a fixed graph. It does not need incident or responder data. The loader can read the entire incident file, but the dispatcher receives neither the full scenario nor the future event queue. `Scenario.known_incidents(now)` is also available as a standalone way to see which incidents have been released.
+## The main idea
 
-## Time, deadlines and responder availability
+The program has four separate jobs:
 
-- Distances are in metres, speeds in metres per second, and all times in seconds. Normal travel time is distance divided by speed, with no conversion factor such as 3.6 or 3600. Routing and simulation preserve fractional seconds. CP-SAT rounds up only the response-time objective coefficients. A future integer clock would need to document its precision and could round travel up and deadlines down, which might exclude borderline assignments.
-- A deadline is the latest permitted **arrival time** in the strict plan. An incident released at 10 with deadline 50 can be reached at 50, and treatment can finish later. Completion is departure + travel + treatment. Response time is arrival − release, so it includes time spent waiting for dispatch.
-- Available responders are ready at time zero. A Busy responder is ready after `time_until_available`. They become free at the supplied start node because the files give no other destination for their initial job. Busy with zero remaining time is allowed. Available with positive remaining time is inconsistent and rejected.
-- A responder is occupied from departure until completion. A job cannot be interrupted once assigned. If one job ends at time \(t\), the next can start at \(t\). The responder stays at the incident node, and the system makes no reservations for future calls.
-- Strict mode rejects estimated late arrivals and closes waiting calls after their deadline. The experimental allow-late mode can finish a call that missed its deadline. Work status and deadline status are separate. A deadline before release is valid input but cannot be met in strict mode. Late mode can still respond. The loader warns if no responder has the required skill.
+1. Bayesian reasoning estimates whether each road is Open, Congested or Blocked.
+2. The HMM estimates historical Low, Medium and High traffic probabilities.
+3. Search finds routes using the selected road and traffic rules.
+4. CP-SAT chooses which currently available responders should take which known calls.
 
-## Bayesian road estimates
+An event-based simulator connects those jobs. It updates time, locations and availability, then asks for another allocation when something changes. It does not give future incidents to the allocator. Input loading can see the whole file; the decision snapshot cannot.
 
-Roads are directed. Evidence for A → B belongs to that direction only. Reports and local weather are available at time zero. The loader rejects duplicate directed roads, invalid references, repeated report sources for a road, and conflicting weather for the same road.
+The assignment leaves some planning choices open. The course methods supply the inference, search and constraints; choices such as the 20% cutoff and traffic-detour allowance are ours. They should be explained and tested, not presented as guaranteed safe rules.
 
-`bayesian.py` uses the model **Weather → Road condition → Reports from citizen, police and sensor**. The three road conditions are Open, Congested and Blocked. For each condition, multiply its weather-based probability by the likelihood of each available report. Divide each weight by the sum of all weights. The likelihood tables are indexed as `table[true_status][reported_status]`.
+## 1. Units, deadlines and availability
 
-When weather is unknown, add the contribution from every weather state:
+Distances and coordinates are metres, speeds are metres per second, and times are seconds. Normal travel time is distance divided by speed. There is no 3.6 or 3600 conversion. Fractional seconds are preserved.
 
-```text
-P(status) = sum over w of P(w) * P(status | w)
-```
+An incident's deadline is an **absolute arrival time**. A call released at 10 with deadline 50 must be reached by time 50, not by 60. Treatment can finish afterwards. Response time is arrival minus release, so waiting before dispatch counts.
 
-A missing report contributes a factor of one because the possible report outcomes sum to one. This assumes that missingness itself tells us nothing about the road. A road with neither reports nor known weather uses `(.685, .180, .135)` for Open, Congested and Blocked. The model does not borrow the weather or reports of neighbouring or reverse roads.
+A responder is occupied through travel and treatment. A new assignment can start exactly when treatment finishes. The responder stays at the incident afterwards. The current model includes no separate patient transport, hospital handover or return-to-station journey. Dispatched jobs are not interrupted, rerouted or replaced.
 
-All three scenarios have the same Bayesian tables. The calculation uses exact sums and products for this small network, without sampling or a general Bayesian library. See Bayes' Nets part 1 slides 10–17 for factorization and conditional independence, and part 2 slides 4–6 and 11 for evidence, normalization, enumeration and elimination.
+An initially Busy responder becomes free after `time_until_available`, at the input start node. That location is an assumption because no other completion location is provided. Busy with zero remaining time is allowed. Available with a positive busy time is rejected.
 
-The calculation assumes the sources are independent once the road condition is known. If sources copy each other, the result can be too confident. Direct multiplication works for up to three sources. Evidence with zero likelihood, including extreme numerical underflow, raises an error. Reports are applied once. Road status is treated as fixed because there is no data about its changes over time. The system keeps all three probabilities for every road and leaves the input tables alone. It estimates individual roads without inferring their true states or a joint model of several roads.
+The default is **strict deadlines**: reject predicted late arrivals and close waiting calls after their deadline. The optional **allow-late** mode can still handle those calls. A completed incident can therefore have a missed deadline. A deadline before release is kept as a warning, not silently changed; strict mode cannot meet it.
 
-**Worked example from Scenario 1.** On N1 → N2, the weather is Rain. Citizen and Police report Blocked, and Sensor reports Congested. The weights are `(.00012, .00384, .00441)`. Dividing by `.00837` gives `(.014336917563, .458781362007, .526881720430)`. The reverse road has three Congested reports and gives `(.005911718339, .993168681030, .000919600631)`.
+## 2. Estimate roads before deciding whether to use them
 
-### Decide which roads to use
+### What the Bayesian model assumes
 
-An earlier idea was to select the most likely state for each road, called MAP. The user chose to keep the full probabilities. `risk_routing.py` handles the separate planning decision. It accepts only roads with `P(Blocked) < threshold`. The threshold must be in [0, 1]. Equality excludes the road. Zero removes all roads, and one removes roads that are certainly blocked. The Bayesian API and explicit CLI require a threshold. The menu supplies .20 for every call, and .20 is also the comparison setting. The assignment provides no calibrated cutoff. Probabilities are kept even for excluded roads.
+The network is Weather → Road condition → Citizen/Police/Sensor reports. Reports are assumed independent once the condition is known. If sources copy each other, the estimate can become too confident.
 
-The estimated duration of an allowed edge is:
+For each possible road condition:
 
-```text
-normal_seconds * (P(Open) + 1.5 * P(Congested)) / (P(Open) + P(Congested))
-```
+- start with its probability under the known weather;
+- multiply by the likelihood of each report for that condition;
+- divide the three final weights by their total.
 
-This is the average edge time **assuming that edge is passable**. The sum is the seconds used by the planner. If roads are dependent, the sum can differ from the expected time given that the entire route is passable. There is no supplied time for traversing a blocked road. An earlier idea of adding a blockage penalty to time could even make a risky edge appear faster if the penalty were too small. It would need its own decision model and is unsuitable for deadline checks.
+If weather is unknown, average over the weather states using their supplied prior probabilities. A missing report contributes no evidence; this assumes the fact that it is missing tells us nothing about road condition. With no reports or known weather, the supplied tables give Open/Congested/Blocked probabilities of **(.685, .180, .135)**.
 
-`build_graph` provides the all-open graph or uses a complete mapping of explicit road labels. Bayesian routing uses `build_bayesian_graph`. The original UCS algorithm works with either graph and minimizes estimated time. A safer but slower route can lose.
+Weather and reports belong to their directed road. A→B does not borrow evidence from B→A or neighbouring roads. Evidence is applied once and treated as fixed. There is no supplied road-state transition model. All scenarios share the same Bayesian tables.
 
-For the distinct directed roads used by a route, with individual blockage probabilities \(p_i\), the reported bounds are:
+The report tables mean `table[true_status][reported_status]`, not the reverse. Duplicate source reports and conflicting weather are rejected. Zero-likelihood evidence raises an error instead of dividing by zero; direct multiplication is adequate for the three supplied sources but could underflow with a much larger model.
 
-```text
-max(p_i) <= P(at least one road is blocked) <= min(1, sum(p_i))
-```
+### A calculation we can check
 
-These bounds require no assumption of independence between roads. A repeated edge counts once because its state is fixed. A route with no edges has bounds (0, 0). The bounds do not measure lateness or prediction accuracy. The route can have more risk than the edge cutoff even if every edge passes it. A rule that limits total route risk, a model of how roads fail together, and simulation of what happens when a responder reaches a blockage are possible extensions.
+For Scenario 1's N1→N2, weather is Rain. Citizen and Police say Blocked, while Sensor says Congested. The Open/Congested/Blocked weights are **(.00012, .00384, .00441)**. Their sum is .00837. Dividing gives approximately **(.014336917563, .458781362007, .526881720430)**.
 
-At .20, Scenario 1 routes N1 → H1 → N2 in 86.7780346821 seconds with bounds [.135, .27]. The direct road takes 51.6666666667 seconds at normal speed but has blockage probability .5268817204. At .10 the requested route disappears. In Scenario 2, .20 removes N1 ↔ N2, with blockage probability .8301957831 in each direction, leaving 60 of 132 ordered pairs of distinct nodes reachable. The program keeps the chosen threshold when a destination is unreachable. [Testing details](TESTING.md)
+The reverse road has three Congested reports and a different result: **(.005911718339, .993168681030, .000919600631)**. Direction matters.
 
-## Historical traffic and the HMM
+### Our road-use policy
 
-The earlier chat mixed two ideas. **Road condition** is Open, Congested or Blocked. **Traffic level** is Low, Medium or High. In the HMM, both the hidden level and the noisy observation use those three traffic labels. An observation of High is evidence about the hidden state, which can still be Low or Medium.
+We keep all three probabilities. We rejected treating the most likely condition as certain.
 
-The file contains history known before the run. `observation_nr` gives the order for each direction and does not specify simulation seconds. The files give neither the age of the data nor the time between readings. We process the history once at startup and keep the final probabilities for the run. This makes them a historical stand-in for current traffic. We do not add live observation events, guess a transition per second, add a prediction over the unknown time gap, or replace missing history with a long-run average. Roads with no readings use that scenario's initial probabilities.
+A road is allowed only when `P(Blocked) < cutoff`. Equality excludes it. The cutoff must be between zero and one: zero removes every edge, while one still excludes a certainly blocked road. The menu and comparisons use **.20 for every priority**. Explicit Bayesian commands require a cutoff. The assignment does not provide a calibrated safe value.
 
-The user rejected proposals that multiplied the road time by an HMM factor or used the maximum of two factors. Those could give an Open road more than its normal duration and count congestion twice. Bayesian road conditions determine time. The HMM gives a separate route preference. We do not multiply probabilities about these different states, use the same report as evidence for both, or assume a joint probability model or independence between the two concepts.
+For an allowed road, average its Open and Congested times **assuming it is passable**. Open uses normal time; Congested uses 1.5 times normal. In code the factor is `(P(Open) + 1.5*P(Congested)) / (P(Open) + P(Congested))`.
 
-### Forward filtering, step by step
+Adding those edge estimates gives the route's travel seconds. It is not a promise of arrival or an unconditional average over blocked-road failures. If road conditions depend on each other, it can also differ from the expected time given that the entire route is passable. We did not invent a traversal time for Blocked roads or add an arbitrary blockage penalty that could make a risky road look faster.
 
-Use the initial distribution as \(P(X_1=x)\), the state for the first observation. Multiply it by the chance of that first reading and normalize. For each later reading, predict the new state from **all** previous states, then multiply by the chance of the reading and normalize again.
+### An edge cutoff is not whole-route safety
 
-```text
-T[y][x] = probability of moving from state y to state x
-E[x][e] = probability of reading e when the hidden state is x
-w1(x) = initial(x) * E[x][e1]
-b1(x) = w1(x) / sum_z w1(z)
+For distinct roads with blockage probabilities `p`, route blockage risk is at least the largest `p` and at most their sum, capped at one. These bounds do not require independent road failures. Reusing the same road counts once because its condition is fixed. A route with no edges has bounds (0, 0).
 
-prediction_k(x) = sum_y b_(k-1)(y) * T[y][x]
-w_k(x) = prediction_k(x) * E[x][e_k]
-b_k(x) = w_k(x) / sum_z w_k(z)
-```
+For example, two allowed roads each with risk .15 can together exceed .20 route risk. Lower HMM exposure can also come with higher blockage bounds. The planner is not described as finding the safest route.
 
-This is Forward filtering from HMM slides 3–4, 9 and 17–23. Viterbi (slides 31–34) finds a single most likely hidden sequence, while Forward adds up contributions from many sequences. Normalizing at each step helps avoid tiny numerical products. Impossible observations raise an error. The supplied positive tables avoid that issue. The course's umbrella example also illustrates starting at \(X_0\). This implementation uses the \(X_1/E_1\) starting point above, so there is no transition before the first observation.
+In Scenario 1, cutoff .20 routes N1→H1→N2 in 86.7780346821 seconds with bounds [.135, .27]. The direct road has blockage probability .5268817204. At cutoff .10 the route disappears. In Scenario 2, cutoff .20 removes N1↔N2 and leaves 60 of 132 different-node pairs reachable. The program does not silently relax the cutoff to reach more calls.
 
-Scenario 2 starts at (.50, .35, .15), while Scenarios 1 and 3 start at (.60, .30, .10). Scenario 2 uses these rows in Low, Medium, High order:
+## 3. What the HMM contributes
 
-| State | Next-state probabilities | Reading probabilities |
+### Historical readings, not live traffic events
+
+The HMM states and observation labels are Low, Medium and High traffic. They are different from the Bayesian Open/Congested/Blocked road conditions.
+
+`observation_nr` orders readings for one directed road. It does not tell us simulation seconds, reading age or time between samples. We process the history once before dispatch and keep the final distribution fixed. We do not guess one transition per simulation second or predict across an unknown gap to the present.
+
+Forward filtering starts with the supplied probabilities for the state at the **first** reading. Apply that reading's emission probabilities and normalize. For every later reading, use the transition table to predict the next state, apply the new reading's likelihood and normalize again. Transition rows mean current→next; emission rows mean hidden→observed.
+
+This uses all possible state histories, rather than choosing one sequence as Viterbi does. Normalizing each step avoids very small products over long histories. Impossible observations raise an error. Roads without history keep their scenario's initial distribution, not a guessed long-run average. Scenario 2 starts at (.50, .35, .15); Scenarios 1 and 3 start at (.60, .30, .10).
+
+### Worked traffic example
+
+For H2→N8 in Scenario 2, the readings are Low, Medium, High, Medium, High. The tables, in Low/Medium/High order, are:
+
+| Current hidden state | Next-state probabilities | Reading probabilities |
 | --- | --- | --- |
 | Low | .75, .22, .03 | .80, .18, .02 |
 | Medium | .15, .70, .15 | .15, .70, .15 |
 | High | .03, .22, .75 | .02, .18, .80 |
 
-For H2 → N8 the readings are Low, Medium, High, Medium, High. The first weights (.4000, .0525, .0030) sum to .4555. The second prediction is (.676103183315, .275323819978, .048572996707). Applying the second reading gives weights (.121698572997, .192726673985, .008743139407), with sum .323168386389.
+The first weights are (.4000, .0525, .0030), totaling .4555. The next predicted distribution is (.676103183315, .275323819978, .048572996707). Applying the second reading gives weights (.121698572997, .192726673985, .008743139407), totaling .323168386389.
 
-| Readings processed | P(Low) | P(Medium) | P(High) |
+| Readings processed | Low | Medium | High |
 | ---: | ---: | ---: | ---: |
 | 1 | .878155872667 | .115257958288 | .006586169045 |
 | 2 | .376579449360 | .596366111606 | .027054439034 |
@@ -109,175 +116,153 @@ For H2 → N8 the readings are Low, Medium, High, Medium, High. The first weight
 | 4 | .049706783670 | .739730632892 | .210562583438 |
 | 5 | .010113305926 | .282220273412 | .707666420662 |
 
-N8 → H2 has no readings and uses (.50, .35, .15). The program retains all three probabilities, the observation count and whether it used only the starting distribution. The scenarios have readings for 14/14, 3/30 and 10/60 directed roads, with 140, 15 and 100 readings respectively. Having only a prior means the traffic level is uncertain.
+N8→H2 has no readings and keeps (.50, .35, .15). The scenarios have histories for 14/14, 3/30 and 10/60 roads, containing 140, 15 and 100 readings. The result keeps the complete distribution, reading count and whether only a prior was used.
 
-### Choose a route using traffic as a preference
+### How traffic influences routing
 
-The traffic score \(Q\) adds `normal_seconds * P(High | history)` for each edge traversal. Longer edges contribute more for the same probability. A repeated traversal contributes again. The score needs no independence assumption and uses High only, although the full distribution is available. It measures historical exposure for comparing routes. Travel time, road blockage probability and route safety are separate.
+We rejected multiplying Bayesian and HMM slowdown factors, or taking their maximum. That could count congestion twice and change the assignment's Open/Congested travel rules. There is no supplied joint probability model linking the two state systems.
 
-| Policy | What it does |
+Instead, each road contributes `normal_seconds * P(High)` to a traffic-exposure score. Add contributions for every traversal; repeated traversals count again. This uses no cross-road independence assumption, but it is still a historical preference score, not duration, blockage probability or a safety guarantee. We use High only; the complete distribution remains available.
+
+Three policies are available:
+
+| Policy | Rule |
 | --- | --- |
-| `bayesian-only` | Use original UCS to minimize Bayesian seconds. |
-| `hmm-tie` | Minimize time first and exposure second. Time ties use exact equality, without rounding or a tolerance. The queue stores both values. |
-| `hmm-bounded` | First find the fastest route with the lowest exposure among ties, with time T* and score Q*. Search for the lowest score, then shortest time, within (1 + allowance) × T*. Accept it only when Q < Q* and Q ≤ (1 − minimum reduction) × Q*. Otherwise use the reference route. |
+| `bayesian-only` | UCS chooses minimum estimated travel time. |
+| `hmm-tie` | Minimum time first; lower exposure only among exact time ties. |
+| `hmm-bounded` | Consider limited detours and prefer sufficiently lower exposure. |
 
-Zero time or zero reference exposure does not lead to a detour. Zero allowance gives the exact tie policy. Both fractions must be finite and in [0, 1]. The CLI requires the allowance in bounded mode. We chose 5% extra travel and 10% minimum exposure reduction before seeing the results. All scenarios, responders and deadline policies use those settings in the comparison. Other settings are useful for separate, planned sensitivity tests.
+For bounded routing, first find the fastest reference route, using lower exposure to break time ties. Then find the lowest exposure within the allowed extra time, breaking exposure ties by travel time. Accept it only if exposure is strictly lower and meets the minimum reduction. Otherwise keep the reference route.
 
-At a junction, a faster route may have higher exposure than a slower route. Bounded search keeps both choices when useful. A label (time, score) can be removed if another gets to the same node with no more time **and** no more exposure. The queue explores by (score, time). Nonnegative costs and this comparison prevent redundant cycles. This is a project extension to UCS. The number of labels can grow exponentially, so the configurable 100,000-label limit raises `TrafficSearchLimit` if exceeded.
+The fixed comparison settings are **5% extra time** and **10% minimum reduction**, chosen before seeing the results. Both fractions must be finite and between zero and one. Zero allowance gives the tie policy. Zero reference time or exposure does not produce a detour.
 
-The simulator passes the graph, endpoints and remaining arrival budget to the planner. Strict mode caps detours at that budget and still checks the actual sum of departure and travel against the deadline. A shortest-route fallback handles a subtraction boundary affected by floating-point rounding. The simulator checks the path shape, directed edges and exact sum of the original graph seconds. `Route.seconds` gives the selected travel duration. It determines arrival, treatment completion and availability, and feeds the CP-SAT response time. The exposure score stays separate.
+Keeping alternatives at a junction is necessary: the fastest path to that node may have worse exposure. Discard a path only when another is no worse in both time and exposure. Nonnegative costs prevent useful cycles, but the number of alternatives can still grow very large. Exceeding the 100,000-label limit raises `TrafficSearchLimit` rather than returning an unproved answer.
 
-Allow-late mode has no hard route deadline cap. A detour can make an otherwise on-time pairing late. CP-SAT gets the resulting `on_time` flag and one route per pairing. Route choice and allocation are separate, and committed routes stay fixed. Lower exposure can come with a higher Bayesian blockage bound, even while every edge passes the cutoff.
+Strict mode caps selected travel by the remaining arrival budget and checks the absolute arrival again. A UCS fallback handles subtraction rounding near a deadline. In late mode there is no hard cap, so a detour can turn an otherwise on-time candidate late. CP-SAT receives that selected route and its actual on-time flag; it does not jointly choose among several routes for one pair.
 
-Exact time ties changed no routes in these scenarios. Bounded routing changed seven endpoint pairs in Scenario 3 and no actual dispatch commitments. [Test results](TESTING.md) · [Traffic comparison](results/traffic_comparison.json)
+The comparison found seven possible route changes in Scenario 3, but no actual dispatch changes. We kept that finding and did not increase parameters afterwards to manufacture an improvement.
 
-## How uniform-cost search works
+## 4. Search methods
 
-`search.py` follows search slides 44–47. A heap gives the next path with the lowest total cost so far. A map remembers the best cost per node, and parent pointers record how to rebuild the route. Skip old queue entries when a better path has replaced them. Accept the goal when it is removed from the queue. Only queue strictly better costs, which also prevents equal-cost zero-time cycles from repeating.
+UCS orders paths by accumulated travel time. It updates a node only for a strictly cheaper discovery, skips outdated queue entries and accepts a goal on removal. That handles directed roads, parallel roads, zero-cost cycles and unreachable goals. Staying at the goal gives zero travel.
 
-`Route` holds node IDs, road IDs and total travel seconds. Starting at the goal gives one node and zero travel. Unreachable goals return `None`. For a finite fixed graph with finite, nonnegative costs and representable sums, UCS finds a minimum-cost route for the model. The course's positive minimum edge-cost assumption for infinite search trees is stronger than needed here. If costs change, start a new search on a new graph.
+UCS finds a cheapest route for a finite fixed graph with nonnegative representable costs. It does not know the true conditions. If costs change, run a new search. Overflow raises an error instead of making a path appear unreachable.
 
-The current search does not need coordinates. In the supplied scenarios, distances are at least the straight-line distance, so a later A* version could use straight-line distance divided by maximum speed as a lower bound when modeled costs only increase. UCS remains the reference for these small graphs.
+A* is a separate course-based comparison. It adds a lower bound on remaining time: straight-line distance divided by maximum road speed. The helper checks that roads are not shorter than their geometric distance and graph costs are at least normal road times. The triangle inequality then justifies the bound; congestion and removing edges preserve it. Rounding can cause tiny numerical differences.
 
-## How the event simulator works
+A* can reopen a node after a cheaper discovery, so it also handles admissible but inconsistent caller-supplied estimates. Arbitrary callbacks must obey the documented conditions; the implementation cannot prove them automatically. Invalid estimates and overflow are rejected. A* returns actual travel seconds, not its queue priority. Equal-cost routes may differ from UCS. It replaces the earlier outside-course test comparison; the normal planner is unchanged, and no speedup is claimed.
 
-`simulation_models.py` defines frozen views and results. `simulation.py:simulate` owns a private graph copy, event queue and changing state. `allocation.py` and `baseline.py` provide automatic callbacks. `scripted.py` provides fixed requests for testing. Scripts can be written with knowledge of later calls, so a successful script checks execution rather than online decision quality. The interface guards against accidentally exposing future input to the allocator. Arbitrary Python callbacks can still read files on their own.
+## 5. How the simulator makes a decision
 
-`simulate(scenario, graph, dispatcher, strict_deadlines=True, decision_times=())` calls the dispatcher with a snapshot of the time, revealed incidents, responders, eligible routes and deadline rule. The dispatcher returns `AssignmentRequest` IDs. The engine checks the whole batch before committing anything, including current availability, release, capability, route, deadline, and repeated responders or incidents. Invalid scripts raise an error rather than partly committing. Earlier events remain processed if a callback fails, and the run returns no successful result. Future reservations and multi-job scheduling are outside the current model.
+The simulator keeps its own graph copy, event queue and changing state. Simultaneous releases, arrivals, completions and initial readiness are processed before asking for assignments. Events use an insertion counter for stable equal-time ordering.
 
-The event heap orders events by (time, insertion counter). It processes all releases, initial readiness, arrivals and completions at a timestamp before asking for a decision. Dispatch records the route, departure, arrival and completion. A responder is `initially_busy`, `available`, `travelling` or `treating`. Location is `None` during travel. Arrival sets the location and starts treatment, and completion frees the responder there. An initial Busy job has no invented route or incident, and zero remaining time is processed before the first time-zero dispatch.
+A `DecisionSnapshot` contains current time, responders, revealed calls, eligible candidates and deadline rule. The dispatcher returns responder/incident IDs. The simulator validates the entire batch before committing any assignment. It never partly commits an invalid batch, though already processed earlier events are not rolled back after a callback error.
 
-Incidents move through `pending`, `travelling`, `treating`, `completed` or `closed_unassigned`. Their deadline status is separately `not_due`, `met` or `missed`. Before finalizing deadline misses, the engine processes same-time zero-travel arrivals and zero-treatment completions. It can ask for another decision at the same timestamp after those changes. Each incident can be assigned once, so the process ends for a finite stream. An empty decision advances the clock. If an incident's deadline is before its release, the deadline is already missed at release, without an event in the past.
+A responder is `initially_busy`, `available`, `travelling` or `treating`. During travel the location is `None`; arrival places them at the incident. Incident work status is `pending`, `travelling`, `treating`, `completed` or `closed_unassigned`. Deadline status is separately `not_due`, `met` or `missed`.
 
-Strict mode closes missed pending work with `strict_deadline_unassigned`. Late mode can dispatch after the deadline and record both completed and missed. When no events or wake-ups remain, waiting calls close with `no_more_events_unassigned`. No route or qualified free responder means there is no candidate at that moment. Later availability can change that.
+Zero-travel arrivals and zero-treatment completions at a deadline are processed before closing waiting calls. Several decisions can occur at exactly one timestamp. Each incident is assigned at most once, so those chains finish. A deadline before release is marked missed on release, without creating an event in the past.
 
-The engine still processes future releases when the current dispatch is empty and finishes every committed job. Deadlines already met do not extend the run. The final time is the last relevant event, including initial availability and explicit wake-ups even when otherwise idle. Scripts use wake-ups for delayed departures. Each script timestamp is consumed once, including during zero-duration chains.
+If no assignment is made, time still advances to later events, including future releases. All committed jobs finish. Met deadlines do not keep the simulation running unnecessarily. Final time is the last relevant event, including initial readiness or an explicit scripted wake-up.
 
-The clock keeps exact float comparisons rather than merging nearby times. Display rounding never feeds the clock, although float boundaries can still affect a decision. Overflow and positive durations too small to advance a huge float clock raise `ValueError`. A conservative integer clock is a possible alternative. Simulation uses the frozen travel estimates as durations. It does not simulate actual blockages, recovery, or forecast accuracy. CLI blockage bounds describe uncertainty without creating failure events.
+Strict waiting calls close with `strict_deadline_unassigned`. Late-mode calls remain available until assigned or no events remain, then close with `no_more_events_unassigned`. No candidate now does not prove none could exist later.
 
-The Scenario 1 script uses the .20 Bayesian cutoff:
+Float times are compared exactly; nearby times are not merged by rounding. Display formatting never changes the clock. Overflow or a positive duration too small to advance a huge clock raises `ValueError`. An integer clock is a possible alternative, but would need an explicit rounding policy. Solver runtime does not advance simulation time.
 
-| Responder / call | Departure | Arrival | Completion |
-| --- | ---: | ---: | ---: |
-| R1 / I2 | 0 | 86.778035 | 116.778035 |
-| R2 / I4 | 0 | 53.067823 | 63.067823 |
-| R4 / I1 | 10 | 66.968786 | 76.968786 |
-| R1 / I5 | 120 | 197.347140 | 217.347140 |
+Scripts can add decision times for delayed departures. Each script timestamp is consumed once, including zero-duration chains. A script may know the scenario in advance; it tests execution, not an online planner's knowledge. The snapshot boundary prevents accidental future exposure, but an arbitrary Python callback could still read external files.
 
-All four finish and meet their arrival deadlines. I5 has deadline 200, so treatment can end at 217.347140. I3, I6 and I7 are left unassigned and miss their deadlines because the fixture does not request them. At 116.778 R1 is free at N2. The script waits until 120 to dispatch I5, which was released at 50. [Independent replay](TESTING.md)
+## 6. What CP-SAT optimizes
 
-## How CP-SAT chooses assignments
+There is a Boolean choice for each eligible pair: send this responder to this incident or do not. Each responder gets at most one new assignment, and each incident gets at most one responder. Ineligible pairs have no variable. Leaving all calls unassigned is always a valid combination, so unexpected infeasibility indicates a model problem.
 
-The user accepted Boolean variables and compatibility rules. They declined ranking by earliest deadline, deadline slack, urgency or waiting age before comparing response times. The allocator builds a new model from each `DecisionSnapshot`, with no input files, full scenario or future events. Candidate generation checks release, availability, capability, routing and the deadline policy. The allocator checks the snapshot again, and the simulator checks the selected batch.
+The objectives are solved in this order:
 
-For each eligible pairing, Boolean `x[r,i]` says whether responder r takes incident i. Boolean `y[i] = sum_r x[r,i]` limits an incident to one responder. `sum_i x[r,i] <= 1` limits each responder to one assignment. Ineligible pairs have no variable and incidents without candidates have y = 0. Leaving every call unassigned is feasible, so INFEASIBLE signals a model error. This follows CSP slides 2, 9 and 10 on variables, constraints and the CP-SAT Boolean matrix.
+1. Maximize Critical assignments, then High, then Medium, then Low, preserving each result.
+2. Only in allow-late mode, maximize on-time counts in that same order while preserving coverage.
+3. Minimize total predicted response time, including waiting since release.
 
-Solve each objective in order, fixing a proven optimum before moving on:
+Coverage comes first because minimizing response alone could reward assigning nobody. There is no separate deadline-rank, deadline-slack, urgency or waiting-age objective. Nor do we optimize treatment length, route risk or keeping rare skills free. A late Critical call can outrank an on-time High call, and that can reduce total on-time coverage.
 
-1. Maximize the number assigned at each priority, in order Critical, High, Medium, Low.
-2. In allow-late mode only, maximize on-time counts in that same order, preserving the earlier counts.
-3. Minimize total estimated response time, including waiting since release.
+The model fixes an objective only after `OPTIMAL`. It skips priority levels that are always zero. Response objective coefficients round up to milliseconds with an integer-range check; hard deadline checks and simulation times stay unrounded. An integer objective can break ties differently from full-precision seconds. We do not use guessed priority weights or a large unassigned penalty.
 
-This stops the empty allocation from winning on zero response time alone. A late Critical assignment can rank above on-time High coverage. The model can therefore return a lower overall on-time percentage. Treatment length, keeping scarce skills free and route risk are outside the objective, although each can affect later calls.
+All stages share a two-second wall-clock budget per decision, including elapsed model-building time. Python work cannot be stopped exactly at that limit. The solver uses one worker, seed zero and stable variable/constraint order. Equal-cost tie choices may still differ across versions or machines.
 
-Each stage is a linear objective. Skip priority stages that are always zero. Fix an objective by equality only after `OPTIMAL`. Time coefficients are `ceil(1000 * (arrival - release))`, with a safe integer range check. This rounds the objective only. The real-valued deadline checks and simulation clock keep their precision. The integer optimum may differ from a continuous-time optimum. No arbitrary priority weights, large penalties or floating-point hard constraints are needed.
-
-All stages share a configurable two-second wall-clock budget per decision. When calculating time left, include elapsed model building time. Python overhead and model construction cannot be stopped exactly at the limit. The solver uses one worker, seed zero and stable variable and constraint order. Exact ties may differ across versions and platforms. There is no extra rule to resolve them or to reserve skills for future calls.
-
-| Solver outcome | Action |
+| Outcome | What happens |
 | --- | --- |
-| OPTIMAL | Keep the solution, fix that objective and continue. |
-| FEASIBLE | Keep the valid solution and stop, without fixing an unproven optimum. |
-| UNKNOWN or time exhausted | Keep the last valid solution, or return no requests if none exists. This can delay work until the next event. The program reports the difference between this and having no candidates, without resetting the budget or switching to greedy. |
-| MODEL_INVALID, INFEASIBLE or unexpected status | Raise `AllocationError`. |
-| NO_CANDIDATES | Return a trivially optimal empty decision without running the solver. |
+| `OPTIMAL` | Keep the solution, fix this objective and continue. |
+| `FEASIBLE` | Keep the valid solution and stop; do not claim it is best. |
+| `UNKNOWN` or exhausted budget | Keep the last valid solution; if none exists, return no assignments and report why. |
+| `MODEL_INVALID`, `INFEASIBLE` or unexpected status | Raise `AllocationError`; do not disguise a broken model as impossible calls. |
+| `NO_CANDIDATES` | Return an empty decision without invoking the solver. |
 
-Diagnostics show stage status, integer objective values, bounds, solver wall time, number assigned and whether all objectives were proved. Solver runtime does not advance the simulation clock.
+Diagnostics retain stage results, bounds, elapsed time and whether every objective was proved. A timeout does not silently trigger a new budget or nearest-responder fallback.
 
-## How to read the comparisons
+The nearest baseline uses the same eligible pairs but greedily sorts by travel time, then responder/incident IDs. It ignores priority, waiting age and late-mode on-time preference. It can waste a flexible responder. This is different from the all-open routing baseline.
 
-The nearest-responder allocator orders eligible pairs by shortest travel, then responder and incident IDs, and takes each pair if neither has been used. It ignores priority, waiting age and the on-time preference in late mode. It can use up a responder with more skills than the call needs. CP-SAT considers the whole current batch. Both use the same candidate rules, time estimates and road cutoff. This allocation baseline is separate from the all-open **routing** baseline.
+In strict Scenario 3, CSP handles 13/20 and nearest 15/20. At initial call I4, R1/R2 have equal cost. CSP chooses R2 and nearest R1; only R1 also has Medical emergency capability. Later locations affect I11 and I14. A best current decision is not a best whole-scenario plan. We kept the measured result. [Comparison tables](TESTING.md)
 
-`benchmark.py` compares both allocators on all three scenarios under strict and allow-late deadlines, starting fresh each time with cutoff .20. Python 3.12.14 and OR-Tools 9.15.6755 reproduced the saved assignments and metrics. No hidden road states are sampled. [Saved allocation comparison](results/allocation_comparison.json)
+## 7. Required files and independent validation
 
-In strict Scenario 3, CP-SAT completed 13/20 and nearest completed 15/20 even though each recorded CP-SAT decision was proved optimal. For the initial First aid call I4, R1 and R2 cost the same. CP-SAT chose R2 and nearest chose R1. R1 can also handle Medical emergency calls and R2 cannot. Their later locations affected I11 and I14. This shows the effect of an earlier tie on future calls. Neither result establishes which allocator is best over the whole scenario. [All measured results](TESTING.md)
-
-## Assignment files and independent validation
-
-The output follows Assignment1 (1).pdf sections 3.1–3.3, 5.1, 5.2 and 8.2 and the scenario README. `plan.json` is a list of four-field records:
+`plan.json` is a list with exactly these four fields per assignment:
 
 ```json
-[
-  {"responder_id": "R1", "incident_id": "I1", "path": ["N1", "H1", "N2"], "time": 0}
-]
+[{"responder_id": "R1", "incident_id": "I1", "path": ["N1", "H1", "N2"], "time": 0}]
 ```
 
-This illustrates the shape, without claiming the assignment is feasible in a specific scenario. `time` is the absolute start of dispatch, with fractional seconds preserved. `path` is the ordered list of nodes, and each adjacent pair identifies one directed edge. A responder already at the incident has a one-node path. A responder can have separate rows for different calls. Unhandled calls have no row. Arrival, duration, traffic score and settings are kept outside this exact schema.
+This illustrates the format, not a claim that this row is feasible in a particular scenario. `time` is dispatch start, with fractional seconds. `path` includes both endpoints; a same-location job has one node. Responders can have several rows over time. Unhandled incidents have no row. Settings, arrivals, treatment times and traffic scores stay outside the required schema.
 
-Section 5.2 gives an example text layout and requires the four statistics below, with time units and an explanation of unhandled work.
-
-| Statistic | How it is counted |
+| Statistic | Meaning |
 | --- | --- |
-| Handled | Treatment completed, including permitted late responses. |
-| Responders used | Distinct responders with committed assignments. |
-| Average response | Arrival minus release, in seconds. Includes waiting and travel, excludes treatment, and averages handled calls only. N/A if none are handled. |
-| Deadline percentage | On-time arrivals divided by all calls. Unhandled calls count as missed for this measure. N/A if there are no calls. |
+| Handled | Treatment finished, including permitted late work. |
+| Responders used | Different responders with committed jobs. |
+| Average response | Mean arrival minus release for handled calls, including waiting and travel but not treatment. N/A when none are handled. |
+| Deadline percentage | On-time arrivals divided by all calls. Unhandled calls do not count as met. N/A for no calls. |
 
-The statistics model also keeps an on-time percentage among handled calls. The text report gives counts by priority, late and unhandled counts, unhandled IDs, a validation result and run settings. It rounds display values while the plan and feasibility checks keep full precision. Read the average alongside coverage because different policies may handle different calls.
+The underlying statistics also keep an on-time percentage among handled calls. The text report adds priority counts, unhandled IDs, late counts, validation, settings and diagnostic explanations. Only display values are rounded. Read mean response together with coverage.
 
-`outputs.make_plan` copies IDs, nodes and departure from `SimulationResult.assignments`. `write_outputs` computes `summarize(result)`, runs independent validation, then checks replayed travel, arrival, completion and metrics against the simulation. A mismatch raises before output creation. The exporter uses the original simulation decisions without allocating, searching or scheduling again.
+The exporter copies actual simulation commitments. Before writing, it validates the plan and compares independently reconstructed travel, arrival, completion and statistics with the result. A mismatch raises an error. It does not run another allocation or search.
 
-The no-argument menu uses all four AI techniques and writes to `results/menu/ScenarioN/`. Explicit normal, nearest and script runs write in the working directory unless `--output-dir` is supplied. The explicit CLI routing default is the optimistic all-open graph with UCS, and Bayesian and HMM policies can be selected with flags. A repeat run replaces the same files. `--compare` uses separate `csp` and `nearest` folders. `--route` writes neither file and rejects a nondefault output folder. The menu prints the files, while explicit commands print diagnostic JSON with paths and validation. Two file writes are separate operations, and I/O errors propagate.
+The validator starts with original scenario data and decoded plan rows. It checks exact fields, known IDs/nodes, numeric finite nonnegative starts, valid directed paths, skills, releases, initial/later readiness, travel, treatment, incident uniqueness and deadlines. It rebuilds Bayesian edge filtering and durations without the graph builder, simulator, search, allocator or statistics summary function. It shares Bayesian inference and the statistics record type, which is why separate arithmetic tests remain important.
 
-The required plan schema has no settings. Read the report for the routing policy, threshold and deadline mode, then give the validator those same assumptions. It does not infer a policy from the path or change the cutoff.
+Rows are replayed by start time, with original order breaking ties. Out-of-order input rows are allowed. Exact completion-time reuse and zero-duration reuse are valid. Invalid plans report row/rule errors instead of performance statistics. The JSON reader rejects repeated keys, NaN/Infinity and malformed input.
 
-### What the validator checks
+`valid` means the plan follows the selected rules. `deadline_compliant` additionally means every assigned arrival is on time. Neither means good coverage: an empty plan can be valid. Late plans must be checked with their relaxed rule. The plan format does not record settings, so the caller must supply the same routing policy, cutoff and deadline rule used to generate it. The validator does not guess them or change them.
 
-`plan_validation.validate_plan` takes the original scenario, decoded plan, routing policy and deadline rule. It shares the Bayesian inference and the `Statistics` data container, but rebuilds edge lookup and filtering, travel times, responder timelines and metrics without the graph builder, search, CP-SAT, simulator or its time helper and summary function. It reconstructs timings rather than reading them from a plan.
+`validate_plan.py` needs no OR-Tools. Its exit codes are 0 for valid, 1 for invalid and 2 for file/configuration problems. A final plan cannot establish what future information an allocator saw; snapshot tests check that separately.
 
-1. Require the exact list and row fields, known string IDs and nodes, and finite, nonnegative start times. Reject booleans and nonfinite numbers. The JSON reader also rejects duplicate keys.
-2. Assign each incident at most once. Allow unhandled calls and allow a responder to take multiple calls over time.
-3. Check the responder's explicit capability, release time, initial readiness and previous job completion.
-4. Start at the responder's current node, end at the incident, and use existing directed edges in between.
-5. Check the Bayesian cutoff on each edge and recompute travel from distance, speed and the conditional formula. Under baseline routing use normal travel time as the model assumption.
-6. Check that arrival and completion times are finite and representable. Keep the responder occupied through travel and treatment, then leave them at the incident.
-7. In strict mode, require arrival at or before the deadline. Allow-late mode records misses and warnings.
+## 8. Explanations do not change decisions
 
-Replay sorts rows by (start time, original row index). Input can be out of order, and row order breaks ties for zero-duration jobs. Finishing at the next departure is legal. Initially busy units start from the supplied node once ready. Invalid plans report row numbers and error codes without giving performance statistics.
+Diagnostics copy the checks already made for each pending, revealed call and responder. They record skill, availability, status, location, expected readiness, route existence and estimated arrival when actually checked. Skill is the first failing reason, before availability, but both Boolean results are stored. Busy or unskilled responders have route/arrival marked not checked, not unreachable.
 
-`validate_plan.py` is read-only and needs no OR-Tools. It exits 0 for valid under the supplied policy, 1 for an invalid plan, and 2 for a file or configuration error. During export the richer simulation times provide a separate comparison for catching timing errors.
+Each decision retains its time, deadline, sequence number, selected batch and existing solver outcome when available. Same-time decisions have different sequence numbers. If an eligible responder went to another call, the explanation names that assignment without guessing its sole cause. A timeout is not labelled proved optimal, and a late candidate is not called on time. Non-CSP dispatchers have no solver status.
 
-### What a passing check means
+Only calls finally closed unassigned receive summaries. These say whether an eligible on-time candidate was ever checked and the earliest arrival actually calculated, including late arrivals, plus responder, check time, closure reason and complete history. No arrival is invented for a busy unit. A strict deadline before release can produce no pending checks at all. The final display snapshot is not counted as a dispatch decision.
 
-A passing plan follows the selected rules and travel estimates. It may still be empty, leave calls unhandled, choose slower routes or have weaker priorities than another valid plan. `deadline_compliant` means the plan passes validation and every **assigned** arrival is on time. Coverage and the deadline percentage over all calls show which work was missed. Late-mode validity uses the relaxed experimental policy. Strict mode is the default for submission examples.
+`statistics.txt` gives a short per-call explanation with a deadline, best checked arrival and seconds late when relevant. Explicit CLI JSON keeps full history under `simulation.unhandled_explanations`; Python callers use the same result field. `record_diagnostics=False` disables recording for comparisons. No extra route searches, solver calls or events are created.
 
-Replay shares the probability model, so it cannot independently prove that model is correct. Actual road conditions and arrival times remain unknown. A plan can show that departures follow releases, while the snapshot tests check whether the allocator had access to future calls. Tests do not prove global optimality, actual safety or calibrated traffic predictions. [Six saved strict and late replays](results/plan_export_validation.json) · [Test cases](TESTING.md)
+These explanations describe this run, not every possible allocation. Different earlier assignments, cutoffs or deadline rules could change later availability. Recording takes memory proportional to responder/pending-call checks over decisions. The solver's existing wall-clock limit can still behave differently under different machine loads.
 
-## What remains
+## 9. Normal execution versus explicit commands
 
-All four AI methods, event execution, exports and standalone validation are implemented. The report, repository submission and access requirements, and oral defence are separate submission work. Actual road failures, recovery and model calibration are limitations of the simulation.
+The menu uses all four AI methods with strict deadlines, cutoff .20, bounded routing .05/.10 and CP-SAT. It prints and saves `results/menu/ScenarioN/plan.json` and `statistics.txt`.
 
-### Proposed improvement for Critical calls
+Explicit commands default to all-open routing unless Bayesian routing is selected. Normal/script runs write in the current directory or `--output-dir`. Comparisons create `csp` and `nearest` subfolders. Route-only inspection writes neither required file and rejects a custom output folder. The menu prints file contents; explicit runs print diagnostic JSON.
 
-The current planner uses the same .20 menu cutoff for every priority. A future strict-deadline experiment could build normal and higher-cutoff candidates for qualified, free responders. Solve the same batch first with normal candidates, then with the added Critical options. Use fallback only if it demonstrably improves on the proven normal Critical count. If the time limit prevents a clear comparison, keep the normal result.
+Repeated runs replace the same output names. The two output writes are not one atomic filesystem operation, and I/O errors propagate. Graphs and inputs remain unchanged by routing and execution. [Commands](README.md)
 
-Compare the entire batch. Two Critical calls can each have a normal route but need the same responder. A different responder using fallback for one could let both be reached. Removing the fallback for each call separately could lose that option.
+## 10. Proposed ideas that are not implemented
 
-Keeping Critical first can trade some lower-priority coverage for a Critical gain. Requiring at least the normal High, Medium and Low counts is a separate, more conservative policy. That choice is open. After fixing coverage, minimize fallback use, then compare risk, then response time. The highest edge probability shows the risk of the worst road. It cannot rank whole-route risk by itself, so report bounds and assumptions too.
+**Critical fallback routes.** We discussed raising the road cutoff only when it improves on-time Critical coverage. Normal-only and expanded candidates should be compared across the whole current allocation, because calls can compete for the same normal responder. Use fallback only after a demonstrated gain over the proved normal Critical count; an inconclusive time limit should retain the normal result.
 
-An estimated on-time arrival assumes a passable route. There is no event for discovering a blockage, recovering or rerouting. Independent replay would check qualification, availability, deadline and the cutoff for each route. To confirm that fallback improved Critical coverage, rebuild the decision and check the normal-only optimum. Keep that audit evidence separate from the required four plan fields.
+Preserving Critical-first priorities may sacrifice lower-priority coverage. Protecting the normal High/Medium/Low counts is a separate, more conservative policy, not the same objective. That choice remains open. After coverage, the proposal would minimize unnecessary fallback use, compare risk, then response time. The highest edge probability alone cannot rank complete route risk.
 
+The predicted arrival would still assume passability. Independent replay would check the expanded road policy, skills, timing and deadlines; separate evidence would need to rebuild the decision and establish the normal-only optimum. The required plan schema should not change.
 
-## Explaining unhandled incidents
+**Waiting for a busy responder.** A responder can take another call once free, but there is no reservation for a future second job or deliberate wait strategy. We discussed waiting for a responder already at the same location when that would still meet the second call's deadline. This is not implemented.
 
-This feature explains the run we actually made. It does not try a different plan or change any decision. The simulator copies the results of its existing checks before each dispatch and the assignments actually committed in that batch. The allocator still receives exactly the same snapshot. The feature adds no route searches, solver calls, events or clock changes.
+**Patient transport and returning to stations.** Currently a responder becomes available as soon as treatment finishes, at the incident location. An ambulance does not then drive a patient to hospital, and no responder automatically returns to a station. A proposed extension would include those extra journeys and, for a hospital trip, any handover time before the ambulance becomes available. It would need clear rules about when a returning unit can accept another call. We would compare returning to a station with staying at the incident or hospital, because that changes the starting point for the next response. These are proposed changes, not current simulation behaviour.
 
-For each revealed, pending incident and each responder, the record contains the required and available skills, current status and location, expected availability time, and the first failed eligibility check. Missing skills are checked before availability; both Boolean results are stored. A busy or unskilled responder has no route or arrival calculation: these fields say not checked, rather than no route. A free, skilled responder records whether the current road policy allows a directed route, its estimated arrival when a route exists, whether that arrival meets the deadline, and whether the current deadline policy accepts it. No route under the selected cutoff does not mean there is no physical road connection.
+**How we would test these extensions.** For Critical fallback, compare additional on-time Critical coverage with the extra route-risk bounds under declared assumptions; more completed calls alone would not establish a better policy. For actual blockages, test whether discovering a blocked road triggers a valid replacement route and correctly updates arrival and availability. Patient transport and station-return tests would check the extra travel/handover time, busy periods and next departure location. These evaluations have not been run because the extensions are not implemented.
 
-Each decision also records its absolute time, deadline, a sequence number (zero-duration events can cause several decisions at the same time), the selected batch, and existing CP-SAT status and optimality evidence when available. If an eligible responder went to another call, we report that exact competing assignment. We do not claim that priority was the only cause, or that the solver proved an optimum when it timed out. A non-CSP dispatcher has no solver status. An eligible late candidate is still not an on-time candidate.
+**Actual blockages and live traffic.** There are no events for discovering a blocked road, turning back, rerouting or receiving live readings. No supplied true-state data establishes safety or prediction accuracy. These are limitations, not hidden implemented features.
 
-At the end, only closed, unassigned incidents receive an explanation in `SimulationResult.unhandled_explanations`. Each summary says whether an eligible on-time candidate was ever checked, the earliest arrival actually calculated (including late arrivals), who could make it and when it was checked, the existing closure reason, and the complete decision history. No arrival is invented for a busy responder. A strict deadline before release can close a call without any pending decision; its history is empty. Only revealed work is recorded, and the final display snapshot is not counted as a dispatch decision.
-
-`statistics.txt` gets a short additional section. Each incident gets a short block with its main reason, deadline, best checked arrival, seconds late when relevant, and final outcome. A competing assignment or busy responder is mentioned when useful. The repeated timeline and technical solver labels stay out of this text; the result retains every pair-level check. Explicit CLI JSON includes the full history under `simulation.unhandled_explanations`; Python callers can inspect the same field. The required four-field `plan.json` and every existing statistic stay unchanged. `simulate(..., record_diagnostics=False)` disables recording for comparison tests; normal runs record by default.
-
-These are observations, not a proof that an incident was impossible under every allocation. A different earlier assignment, route policy or deadline rule could change later availability. Arrival estimates still assume usable roads. Recording uses memory proportional to pending incident/responder pairs across decisions; the text report is shorter than the full history. CP-SAT still has its existing wall-clock limit, so results on a different or heavily loaded computer can vary when that limit is reached.
+All four required AI components, simulation, outputs and validation are implemented. The report, repository access, submission and oral defence still need their own final checks.

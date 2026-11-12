@@ -1,144 +1,162 @@
-# Follow the code from start to finish
+# How the code works
 
-Read this guide to find the code behind a run. [DESIGN.md](DESIGN.md) explains the choices and calculations. [DATA_SCHEMA.md](DATA_SCHEMA.md) lists the exact input fields.
+This guide follows one normal run. Read [DESIGN.md](DESIGN.md) for why we chose these rules, or [TESTING.md](TESTING.md) for the evidence that they work.
 
-## Start with one run
+## Start here
 
-Run `python run.py` and pick a scenario. The menu uses Bayesian road estimates, bounded HMM routing, CP-SAT allocation and strict deadlines. It prints the plan and statistics and saves them under `results/menu/ScenarioN/`.
+Run `python run.py` in the project environment and choose a scenario. The menu uses all four AI techniques. It prints the plan and statistics and saves them in `results/menu/ScenarioN/`.
 
-To see search on its own, try:
+The main flow is:
 
-```console
-python run.py Scenarios/Scenario1 --route H1 N2
+```text
+Load and check the input files
+    ↓
+Estimate road conditions with Bayesian reasoning
+    ↓
+Estimate historical traffic with the HMM
+    ↓
+Simulate releases, travel and treatment
+    ↓
+At each decision: find routes → choose assignments with CP-SAT
+    ↓
+Validate the finished plan → write plan.json and statistics.txt
 ```
 
-`run.py:main` reads the arguments and calls `load_scenario` to check the seven files. Inference runs separately from loading. This explicit command builds the all-open graph with `routing.build_graph`, then asks `search.ucs` for a path from H1 to N2. It prints diagnostic JSON with a direct route of about 48.067 seconds at normal speed. Route mode performs no dispatch and writes neither assignment file. This example assumes open roads for comparison.
+Road and traffic beliefs are calculated before the simulation. Routing and allocation happen again when the current situation changes. Future incidents are kept inside the simulator until their release.
 
-## Read a function's documentation
+## Where to find each part
 
-- **Parameters** tell you what to pass, its shape and units. On a dataclass, these describe the constructor fields. Python supplies `self` when you call a method on an object.
-- **Preconditions** describe what must be true before the call. Some are checked by the function and others are the caller's responsibility. A docstring adds no runtime checks by itself.
-- **Postconditions** describe the result and state changes after success. A raised error does not promise those results. The docs say when an error is the only possible outcome.
-
-For example, `Graph.add_edge` checks that both nodes exist and that seconds are finite and nonnegative. It adds one directed edge. A `Road` created directly does not check its fields, so use the loader for validated input. UCS also assumes costs are fixed and their sums fit in a finite float. Extremely large values can overflow even when each input value is finite.
-
-## Input records in models.py
-
-A dataclass groups named fields, such as `incident.deadline`. `frozen=True` prevents replacing a field, but a dictionary stored inside it can still be changed. Treat loaded inputs as read-only.
-
-| Record | What it contains |
+| File in `emergency_response/` | Responsibility |
 | --- | --- |
-| `Node` | Location ID and coordinates in metres. |
-| `Road` | Directed endpoints, distance and normal speed. |
-| `Responder` | Start node, explicit skills and starting availability. |
-| `Incident` | Release time, absolute arrival deadline and treatment duration. |
-| `RoadReport` | A Citizen, Police or Sensor report plus the road's known local weather. |
-| `TrafficObservation` | A reading at one position in a directed road's historical sequence. |
-| `Scenario` | All checked inputs, probability tables and warnings. |
+| `models.py` | Input records: nodes, roads, responders, incidents and observations. |
+| `loaders.py` | Read the seven files and reject inconsistent input. |
+| `graph.py`, `routing.py` | Directed graph and normal/explicit-status road costs. |
+| `bayesian.py` | Calculate Open, Congested and Blocked probabilities. |
+| `risk_routing.py` | Apply the blockage cutoff, estimate travel and report route-risk bounds. |
+| `hmm.py` | Process historical traffic with Forward filtering. |
+| `search.py` | UCS used by the planner and A* used for comparison. |
+| `traffic_routing.py` | Select routes using travel time and a separate traffic preference. |
+| `simulation_models.py`, `simulation.py` | Current decision views, event timing, responder state and final results. |
+| `allocation.py`, `baseline.py` | CP-SAT allocation and nearest-responder comparison. |
+| `scripted.py` | Fixed assignment requests for testing simulation behaviour. |
+| `diagnostics.py` | Explain unhandled calls using checks already made. |
+| `statistics.py`, `outputs.py` | Count results and export the required files. |
+| `plan_validation.py` | Rebuild and check a plan using original inputs. |
 
-`Road.key` gives `(source, target)` so evidence joins the right direction. `Road.id` creates a readable edge name because the files give no separate road ID. `Road.normal_seconds` divides metres by metres per second.
+The top-level `run.py` connects them. `validate_plan.py` checks a saved plan. `benchmark.py` and `benchmark_traffic.py` reproduce comparisons.
 
-`Responder.initial_ready_at` describes the start of the run. The simulator keeps later availability separately. `Scenario.known_incidents(now)` filters by release time. Assignment and completion status live in the simulator.
+## 1. Read the scenario
 
-## Input checks in loaders.py
+`run.main()` handles the menu or command-line options, then calls `load_scenario`.
 
-The file readers check syntax. The scenario loader checks what the values mean. This keeps IDs, labels and capabilities as text while numbers are parsed where expected.
+The loader first checks the map, then responders, incidents, road reports, traffic history and probability tables. It checks IDs, references, labels, numeric ranges, skills and probability rows. It does not silently repair bad data. A missing report is allowed; a road referencing a nonexistent node is not.
 
-| Internal helper | What it checks |
+Some valid inputs still describe a difficult situation. For example, a call can have a deadline before its release. That produces a warning instead of changing the deadline. Historical readings are sorted by `observation_nr`; duplicate or missing positions within a supplied history are rejected.
+
+The small reader helpers handle repeated JSON keys, NaN/Infinity, missing fields, text, allowed labels, duplicate IDs and probability rows. CSV values stay text until a field needs numeric conversion. CSV column order can vary, but the expected column names must be present.
+
+`Scenario` holds the checked inputs. A frozen dataclass prevents replacing a field, but nested dictionaries can still be edited, so treat all loaded input as read-only.
+
+Useful names:
+
+- `Road.key`: `(source, target)`, used to join evidence to the correct direction.
+- `Road.id`: readable edge identity, since the files supply no separate road ID.
+- `Road.normal_seconds`: distance divided by speed.
+- `Responder.initial_ready_at`: availability at the start, not after later assignments.
+- `Scenario.known_incidents(now)`: released incidents only.
+
+For exact CSV/JSON fields, inspect the supplied scenario files and [scenario instructions](Scenarios/README.md). `loaders.py` contains the checks actually enforced by the program.
+
+## 2. Turn road reports into a usable graph
+
+`bayesian.infer_road_status` estimates one road's three probabilities. `infer_scenario` does the same for every directed road. They calculate beliefs; they do not decide whether to drive along a road.
+
+`risk_routing.build_bayesian_graph` makes that decision using `blocked_threshold`. It removes roads whose blockage probability is at or above the cutoff. Allowed roads get an average Open/Congested time assuming they are passable. The full distributions remain available.
+
+`route_blockage_bounds` reports separate lower and upper risk bounds. Those bounds are not travel time, and the edge cutoff is not a bound on a complete route's risk.
+
+The generic `Graph` stores outgoing `Edge` records. Each edge has a road ID, destination and seconds. It never invents reverse roads. `neighbors(node)` returns a tuple so callers cannot edit the internal adjacency list accidentally.
+
+For tests or optimistic comparisons, `routing.build_graph` can instead use all-open times or a complete mapping of Open/Congested/Blocked labels. Missing labels are rejected. All graph builders leave the scenario unchanged.
+
+## 3. Process historical traffic
+
+`hmm.forward_filter(tables, observations)` applies the first reading to the initial distribution, then repeats prediction and observation updates. `infer_traffic` runs it for each direction and returns `TrafficBelief` records.
+
+A belief contains all three traffic probabilities, how many observations were used, and `prior_only`, which says no history was available. Missing histories use their scenario's initial distribution. The HMM does not know dispatch times or create live simulation readings.
+
+`TrafficRouter` uses each road's normal seconds multiplied by its historical probability of High traffic as an exposure contribution. It stores this separately from Bayesian travel time. `exposure(route)` adds the contributions; `describe(...)` reports the selected route and fastest reference route, times, scores, extra seconds and reduction.
+
+Its equal-time policy orders routes by travel time, then exposure. The bounded policy keeps useful alternatives at a node, such as a faster path and a slower path with less exposure. It accepts a detour only within the selected extra-time allowance and minimum reduction. It raises an error if the 100,000-label search limit is reached.
+
+## 4. Find paths with UCS or A*
+
+UCS in `search.ucs` uses these variables:
+
+| Name | Meaning |
 | --- | --- |
-| `_unique_object`, `_invalid_constant` | Duplicate JSON keys and invalid constants such as NaN and Infinity. |
-| `_fields` | Required object keys. |
-| `_text` | Nonempty text, without silently trimming IDs. |
-| `_number` | Numeric conversion, fractions, finite values and ranges. |
-| `_choice` | Whether a label or reference is allowed. |
-| `_unique` | Duplicate IDs before one record can overwrite another. |
-| `_distribution`, `_matrix` | Probability labels, ranges and row sums. Inputs are not repaired. |
-
-The seven loading steps are nodes, roads, responders, incidents, road reports, traffic history and model tables. Loading the map first lets the later steps check locations. Broken input stops the run. Missing evidence and impossible situations, such as a deadline before release, produce warnings.
-
-Traffic readings are grouped by direction and sorted by `observation_nr`. That number is their order, with no effect on incident release time. Report tables use `table[true_status][reported_status]`. HMM tables use `transition[current][next]` and `emission[hidden][observed]`. The loader checks the tables. The Bayesian and HMM modules then use them for separate calculations.
-
-## Graphs and the different road rules
-
-`graph.py` maps each node to its outgoing edges. An edge has a destination, road ID and fixed duration. Reverse edges must be added explicitly. `neighbors` gives a tuple to protect the internal list from accidental edits.
-
-`routing.build_graph` builds a fresh graph from the scenario. With no status mapping, it uses normal time for every road. With a complete explicit mapping, Open uses normal time, Congested uses 1.5 times normal, and Blocked is left out. It requires a complete mapping so missing entries are caught. The scenario stays untouched. The explicit-label version is useful for tests and the baseline.
-
-`bayesian.infer_road_status(probabilities, weather=..., reports=...)` multiplies the prior and likelihoods and normalizes across all three states. It sums over unknown weather and gives missing reports a factor of one. `infer_scenario` repeats this by directed road, including roads with no reports. It returns probabilities.
-
-`risk_routing.build_bayesian_graph(scenario, beliefs, blocked_threshold=...)` makes the road-use decision. It excludes probabilities at or above the supplied cutoff and gives each allowed edge an average traversal time assuming it is passable. It keeps the full distributions rather than picking one road label. `route_blockage_bounds` gives a separate lower and upper bound without assuming road failures are independent.
-
-The Bayesian CLI example in the README prints beliefs, policy, route, travel seconds and risk bounds. A missing route is `null`. A route can have a blockage bound above the cutoff because the cutoff checks one edge at a time. UCS minimizes estimated seconds. Bayesian and HMM tests cover probability arithmetic, unknown weather, road policies, all-pairs routes and CLI behaviour. [Formulas and examples](DESIGN.md)
-
-## Uniform-cost search in search.py
-
-UCS explores the next path with the smallest accumulated cost `g(n)`.
-
-| Name | Job |
-| --- | --- |
-| `frontier` | Heap of `(cost, tie_counter, node)` entries to explore. |
-| `serial` | Counter that breaks equal-cost ties in discovery order. |
-| `best` | Cheapest discovered cost to each reached node. |
-| `parent` | Previous node and chosen road, used to rebuild the route. |
+| `frontier` | Queue of paths still worth exploring, cheapest first. |
+| `serial` | Discovery counter to break equal-cost ties. |
+| `best` | Cheapest travel cost found so far for each node. |
+| `parent` | Previous node and road, used to rebuild the path. |
 | `candidate` | Cost of reaching a neighbour through the current node. |
 
-When a cheaper route appears, push a new heap entry. The old one is skipped when popped if it no longer matches `best`. This avoids editing priorities inside the heap. Accept the goal when its current best entry is popped, since a newly discovered route to the goal could still be improved. Walk backwards through `parent`, then reverse the result. Adding only strictly cheaper candidates stops equal-cost zero-time loops.
+When a cheaper path is found, UCS adds a new entry. The older entry is skipped when removed if its cost is no longer best. It accepts the goal on removal, not first discovery. Only strictly cheaper updates are queued, so equal-cost zero-duration cycles cannot repeat forever.
 
-`Route.seconds` is travel time. The simulator adds departure to get arrival, then subtracts release to get response time. If the heap empties, return `None`. Start equals goal returns one node, no roads and zero travel. The shortest-path guarantee applies to the fixed, finite graph with nonnegative costs, within the time estimates used.
+`Route` contains `nodes`, `roads` and travel `seconds`. An unreachable goal gives `None`; staying at the start gives one node and zero seconds. Invalid endpoints or unrepresentable travel sums raise errors. Costs must stay fixed during search.
 
-## Historical traffic in hmm.py and traffic_routing.py
+`search.astar` uses the course rule `f = g + h`. `straight_line_heuristic(scenario, graph, goal)` builds `h` from straight-line distance and maximum speed after checking the geometry and graph costs. A* can revisit a node after a cheaper discovery. With zero `h`, it behaves like UCS. Arbitrary supplied heuristics must satisfy the documented lower-bound conditions.
 
-`hmm.forward_filter(tables, observations)` starts from the supplied initial probabilities, applies the first observation, then predicts and updates for each later reading. It returns all three traffic-state probabilities. `infer_traffic(scenario)` checks and sorts each directed history, runs Forward once and returns `TrafficBelief` records with `observation_count` and `prior_only`. A road with no readings keeps the supplied prior. This code works with historical sequences independently of route duration, dispatch and the simulation clock.
+A* is used for comparison tests, not selected by the normal menu. The tests compare minimum costs and valid paths, not speed. Actual dispatch still uses UCS or the traffic-aware search.
 
-`TrafficRouter` stores `normal_seconds * P(High)` by directed road ID. `exposure(route)` adds these scores. `_shortest` uses a UCS queue ordered by (travel, exposure). `_bounded` keeps useful alternatives at each node, including a faster route with more exposure and a slower one with less, as long as they fit the time limit. The router checks the extra time and minimum exposure reduction against the fastest reference route. `describe` reports the chosen and reference times and scores, extra seconds and relative improvement. The search raises an error if its label limit is exceeded.
+## 5. Advance the simulation
 
-When `simulate` receives no custom planner it uses plain UCS. With a traffic planner, it gives it the graph, current endpoints and remaining arrival time in strict mode. `_check_route` checks the shape, edges and summed travel seconds. The route's Bayesian seconds drive arrival, completion and CP-SAT response cost. Exposure only helps select a route. Strict mode prevents a detour that arrives late. Late mode can select one and records its deadline outcome.
+`simulate(...)` makes a private graph copy and starts an event queue. It jumps to the next release, availability change, arrival, completion or deadline rather than checking every simulated second.
 
-The explicit CLI accepts `--traffic-policy hmm-tie` or `hmm-bounded` with Bayesian routing. Bounded mode needs `--max-extra-fraction`. Its minimum exposure reduction defaults to .10. The explicit CLI default `bayesian-only` uses plain UCS. JSON keeps traffic beliefs and their history information, exposure, travel seconds and road blockage bounds separate. `benchmark_traffic.py` compares all three policies with both allocators and deadline modes and checks all endpoint pairs. [Saved traffic comparison](results/traffic_comparison.json)
+At a decision, it creates a `DecisionSnapshot`: current time, revealed incidents, responder states, eligible candidate pairs and deadline rule. Each candidate already has a route, arrival, completion and on-time flag. The dispatcher receives this view, not the full future scenario.
 
-## Simulation in simulation.py
+If no traffic planner is supplied, candidate routes use UCS. A custom planner receives current endpoints and, in strict mode, the remaining deadline budget. `_check_route` verifies its directed edges and travel sum. A shortest-route fallback handles a float subtraction boundary. The selected route's seconds determine arrival and completion; exposure never substitutes for seconds.
 
-`simulate(scenario, graph, dispatcher, strict_deadlines=True, decision_times=())` makes a private graph copy and keeps the changing state separate from the original inputs. The event heap jumps to releases, initial readiness, arrivals and completions. Events at the same time are applied before dispatch. Zero-duration chains finish before final deadline checks. A deadline already met cannot end ongoing treatment or extend the run.
+The dispatcher returns `AssignmentRequest` IDs. The simulator checks the whole proposed batch before committing any of it. Repeated responders, repeated calls or ineligible pairs cause an error. Earlier processed events are not rolled back after an invalid callback.
 
-`simulation_models.py` defines frozen decision views, requests, candidates and results. The dispatcher receives a `DecisionSnapshot` with the time, revealed calls, responder states, current candidates and deadline policy. It returns `AssignmentRequest` IDs. The engine checks the full batch before committing routes and times. The interface allows dispatch only for revealed work and available responders. Committed assignments stay fixed.
+During travel the responder's location is `None`. Arrival starts treatment at the incident. Completion frees the responder there. There is no additional patient transport, hospital handover or automatic station return in this model; those are proposed extensions in DESIGN.md. Initially busy units become free at their supplied start node without inventing an earlier job. Incident work status and deadline result are separate. See [DESIGN.md](DESIGN.md) for strict/late and same-time rules.
 
-A responder's location is `None` while travelling. On arrival it becomes the incident node and treatment starts. They become free there at completion. Initially busy units become free at their supplied start node without a made-up previous incident. Work status is pending, travelling, treating, completed or closed unassigned. Deadline status is separately not due, met or missed. Strict mode closes pending calls after their deadline. Late mode can finish them with a missed deadline, and closes remaining unhandled work when no events remain.
+The result records assignments, final views and processed events. It finishes committed jobs and future releases even after a decision assigns nobody.
 
-`scripted.py` reads JSON fixtures and uses each timestamp once. Pass its `decision_times` for extra wake-ups. Script writers can know the input in advance, while the engine still checks that calls have been released. Scripts test execution. CP-SAT makes the automatic decisions.
+## 6. Choose assignments
 
-The result contains commitments in time order and event logs. The run uses deterministic estimates. CLI risk bounds do not simulate road failures. Function and view docstrings explain parameters and what callers can expect before and after the call.
+`allocation.CspDispatcher` builds a new CP-SAT model from the current candidates. A Boolean `x[r,i]` means send responder r to incident i. Responder sums are at most one. Boolean `y[i]`, equal to the sum of incident i's selected pairs, limits that call to one responder. Ineligible pairs have no variable.
 
-## Allocation in allocation.py
+The objectives are coverage by priority, optional on-time coverage in late mode, then response time. Only a proved optimum is fixed before the next objective. Costs are rounded up to integer milliseconds for that final objective; simulation and hard deadline checks keep their precision.
 
-`CspDispatcher(snapshot)` builds a new Boolean model from current candidates. `x[r,i]` chooses a responder and call. `y[i] = sum_r x[r,i]` is also Boolean, so a call can get at most one responder. Each responder sum is at most one. Ineligible pairs have no variable. Leaving calls unassigned is feasible, but coverage is considered before minimizing time.
+The allocator records solver outcomes, bounds and time spent. It distinguishes a proved optimum, a valid solution not proved best, a timeout and a model error. Its wall-clock budget does not advance simulated time.
 
-The solver maximizes Critical, High, Medium and Low counts in order. In late mode it then maximizes on-time counts in that order. Finally it minimizes total response, rounded up to integer milliseconds in the objective. There is no extra urgency, deadline ranking or waiting-age bonus. Only a proven optimum is fixed for later stages. Simulation times stay unrounded. Diagnostics record stage statuses, bounds and elapsed time, and distinguish proven optima from feasible results and exhausted budgets. The allocator never receives future input.
+`baseline.NearestDispatcher` uses the same candidates but greedily takes shortest-travel pairs, then stable IDs. It ignores priority and can consume a flexible responder unnecessarily. It is a comparison, not a guaranteed best allocation.
 
-`NearestDispatcher` uses the same candidates and sorts by travel then stable IDs. It takes pairs while both members are free in that batch. This is a simple comparison, with no guarantee of the best matching. `statistics.summarize` counts completed work and on-time arrivals, calculates percentages over all and handled calls, and averages response among completed calls. Empty denominators give `None`.
+`scripted.py` lets a test supply requests at fixed times. `decision_times` wakes the simulator for delayed scripted departures. Each timestamp is consumed once. Scripts can be written with knowledge of the scenario; they check execution rather than online planning quality.
 
-The CLI supports CSP, nearest, scripts, route inspection and comparisons. `benchmark.py` runs the controlled comparison. In Scenario 3, an equal-cost first assignment changes where qualified responders are for later calls, so the best current CP-SAT decision does not guarantee the best full run. [Saved allocation comparison](results/allocation_comparison.json) · [Test results](TESTING.md)
+## 7. Explain unhandled calls
 
-## Export and replay
+`diagnostics.py` copies the simulator's actual checks and committed batch. It makes no extra search or allocation attempt. Busy/unskilled responders have route and arrival fields set to `None`, meaning not checked.
 
-`outputs.make_plan(result)` copies each `AssignmentRecord` into the required responder ID, incident ID, node path and departure time fields. `write_outputs` validates the plan and checks independently replayed travel, arrival, completion and statistics against the run. Then it saves `plan.json` and `statistics.txt`. The exporter uses the existing assignments. `render_statistics` adds units, definitions, priority counts, unhandled IDs, validation and settings. Empty measures show N/A.
+`SimulationResult.unhandled_explanations` contains summaries and complete histories for calls left unassigned. The text report gives a shorter version; explicit CLI JSON includes the full records. `record_diagnostics=False` disables recording for comparison tests. These observations cannot prove that every possible earlier allocation would fail.
 
-`plan_validation.load_plan(path)` rejects malformed JSON, duplicate keys and NaN/Infinity. `validate_plan(original_scenario, decoded_plan, ...)` checks the exact shape, IDs, skill, release, readiness and previous completion, current location, directed roads, Bayesian edge cutoff and time, and deadlines. It sorts by start time, keeping original row order for zero-duration jobs at the same time. It calculates travel and treatment from the inputs. It shares Bayesian inference and a statistics dataclass, while independently rebuilding the replay without the simulator, graph builder, search or `summarize`. Errors identify the row and rule.
+## 8. Count, check and export the result
 
-`PlanValidation.valid` means the plan follows the chosen policy. `deadline_compliant` also requires every assigned arrival on time. Coverage comes from unhandled IDs and metrics. Invalid plans have `statistics=None`. The standalone validator does not need OR-Tools. It exits 0 for a valid plan, 1 for an invalid plan and 2 for file or configuration errors.
+`statistics.summarize` counts completed calls, distinct responders and deadline results. It averages arrival minus release for completed calls. An empty average or percentage becomes `None`, displayed as N/A.
 
-Menu runs save in a scenario folder. Explicit normal and script runs use the current directory or `--output-dir`. Comparisons create `csp` and `nearest` subfolders. Route inspection writes no plan. Explicit runs print JSON with output paths and validation. [Run commands](README.md)
+`outputs.make_plan` copies assignments into the required four fields. `write_outputs` validates the plan and compares reconstructed timings/statistics with the simulation before writing either file. It does not allocate again. `render_statistics` formats the report with units, priority results, configuration and explanations.
 
-## Tests
+`plan_validation.validate_plan` starts from the original scenario and plan. It reconstructs timelines and road times without calling the simulator, graph builder, search, allocator or summary function. It shares Bayesian inference and the statistics record type, so probability arithmetic still needs its own tests.
 
-`tests/test_foundation.py` uses small graphs you can check by hand. `tests/test_scenarios.py` checks real inputs, road-status effects and 845 ordered node pairs against Bellman–Ford, a separate shortest-path method. It also breaks temporary copies of inputs to test errors and warnings.
+A valid plan follows the selected rules; it can still handle few incidents. `deadline_compliant` additionally requires every assigned arrival to be on time. An invalid plan has no performance statistics. The standalone checker needs no OR-Tools and exits 0 for valid, 1 for invalid and 2 for file/configuration errors.
 
-```console
-python -m unittest discover -s tests -v
-```
+The menu writes scenario folders. Explicit runs use the current folder or `--output-dir`; comparisons create `csp`/`nearest` subfolders. Route inspection writes no assignment files. Explicit commands print JSON, while the menu prints the saved files.
 
-[Full testing notes](TESTING.md)
+## How to read the comments
 
+**Parameters** explain the arguments and units. **Preconditions** say what must be true before a call; some are checked, others are the caller's responsibility. **Postconditions** describe successful results and state changes. The comments themselves do not enforce rules.
 
-## Explanations for unhandled calls
+For example, `Graph.add_edge` validates finite nonnegative seconds, but constructing a `Road` record directly does not validate its fields. Normally use `load_scenario` to get checked inputs.
 
-`diagnostics.py` stores frozen copies of the eligibility checks the simulator already makes. It never searches for another route or allocates another responder. `simulate` records checks before dispatch and the actual committed batch afterwards. Busy or unskilled responders have route and arrival fields set to None, meaning not checked. `SimulationResult.unhandled_explanations` contains summaries and complete histories only for unhandled calls. `statistics.txt` shows a shorter version, and explicit CLI JSON includes the complete records. These records describe this run; they do not prove that every possible allocation would fail. Set `record_diagnostics=False` only when you want a recording-off comparison.
+To inspect search alone, run `python run.py Scenarios/Scenario1 --route H1 N2`. This intentionally uses all-open costs, returns about 48.067 travel seconds and performs no dispatch. For complete execution, use the menu or the explicit policies described in the [README](README.md).

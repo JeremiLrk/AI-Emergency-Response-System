@@ -13,7 +13,7 @@ git clone https://github.com/JeremiLrk/AI-Emergency-Response-System.git
 cd AI-Emergency-Response-System
 ```
 
-Run all commands from the folder containing run.py and requirements.txt.
+Run all commands from the folder containing `run.py` and `requirements.txt`. The setup below is needed once on each computer. After that, use the shorter commands under **Run it again later**.
 
 ### Windows (PowerShell)
 
@@ -44,11 +44,27 @@ The pinned OR-Tools release provides Python 3.12 packages for Windows x86-64, In
 
 requirements.txt lists the one direct third-party dependency. pip installs OR-Tools' own dependencies automatically. The other project imports come from Python's standard library.
 
+### Run it again later
+
+You do not need to recreate the environment or reinstall the requirements for every run.
+
+Windows:
+
+```powershell
+.\.venv\Scripts\python.exe run.py
+```
+
+macOS or Linux:
+
+```sh
+./.venv/bin/python run.py
+```
+
 ### Choose a scenario
 
-If you use an IDE, select the environment where you installed the requirements and run `run.py` without arguments. Choose **1**, **2** or **3** for a scenario, or **0** to exit.
+If you use an IDE, select the environment where you installed the requirements and run `run.py` without arguments. Choose **1**, **2** or **3** for a scenario, or **0** to exit. The settings are the same for all three scenarios; you do not need to enter extra arguments.
 
-The menu runs the full planner with strict arrival deadlines. It uses CP-SAT for assignments, a 20% road blockage cutoff, and a historical traffic preference that allows up to 5% extra travel for at least 10% less exposure. It prints and saves two files in `results/menu/ScenarioN/`. Running the same scenario replaces its previous menu results.
+The menu runs the full planner with strict arrival deadlines. It uses CP-SAT for assignments, a 20% road blockage cutoff, and a historical traffic preference that allows up to 5% extra travel for at least 10% less exposure. It prints and saves two files in `results/menu/ScenarioN/`. For example, Scenario 1 saves to `results/menu/Scenario1/`. Running the same scenario replaces its previous menu results.
 
 | File | What you get |
 | --- | --- |
@@ -57,7 +73,9 @@ The menu runs the full planner with strict arrival deadlines. It uses CP-SAT for
 
 The average response time includes waiting and travel for calls that were handled. The deadline percentage includes all calls, including unhandled ones. A separate validator checks the plan using the original inputs and estimated travel times.
 
-## Run the tests or check a plan
+## Run all tests
+
+The first command in each block runs the complete suite, including full-system tests on all three scenarios. The second command separately checks a saved Scenario 1 plan; choose Scenario 1 in the menu first if that plan has not been generated.
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
@@ -71,7 +89,7 @@ On macOS or Linux, use:
 ./.venv/bin/python validate_plan.py Scenarios/Scenario1 results/menu/Scenario1/plan.json --routing-policy bayesian --block-threshold .2
 ```
 
-The test command runs all 160 tests. A successful run ends with OK. [What each test file checks](TESTING.md)
+The test command runs all 175 tests. Search checks compare UCS with A* from the course on all three scenarios, and independently check both against every simple path in small graphs. UCS remains the normal planner. A successful run ends with OK. [What each test file checks](TESTING.md)
 
 Use the same road and deadline settings as the saved run. For a plan generated with `--allow-late`, add that flag to the validator too. Exit codes are 0 for a valid plan under the selected rules, 1 for an invalid plan, and 2 for file or configuration errors.
 
@@ -119,4 +137,3 @@ Add `--allow-late` to let responders arrive after the deadline. Use a different 
 - [Design](DESIGN.md) explains the rules, formulas and assumptions.
 - [Testing](TESTING.md) records the tests and benchmark results.
 - [LLM notes](LLM_NOTES.md) record what we accepted, corrected and tested, including the exact first prompt.
-- [Data schema](DATA_SCHEMA.md) is an optional reference for input fields and validation rules.

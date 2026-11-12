@@ -9,7 +9,7 @@ import unittest
 from emergency_response.loaders import (load_scenario, validate_road_probabilities,
                                          validate_traffic_probabilities)
 from emergency_response.routing import build_graph
-from emergency_response.search import ucs
+from emergency_response.search import astar, straight_line_heuristic, ucs
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIOS = ROOT / "Scenarios"
@@ -87,9 +87,9 @@ class ScenarioTests(unittest.TestCase):
         self.assertEqual((i5.timestamp, i5.deadline), (50, 200))
         self.assertEqual([o.observation_nr for o in s.traffic_history[("H1", "N1")]], list(range(1, 11)))
 
-    def test_baseline_all_pairs_against_bellman_ford(self):
-        # Independent repeated relaxation checks optimal costs and route validity.
-        """Compare UCS costs and returned edges with independent relaxation for 845 pairs.
+    def test_baseline_all_pairs_against_astar(self):
+        # Compare two course algorithms and validate both returned paths.
+        """Compare UCS with straight-line A* for all 845 pairs; validate both paths.
 
         Parameters:
             self: The ScenarioTests instance receiving the call; passed automatically by
@@ -109,14 +109,11 @@ class ScenarioTests(unittest.TestCase):
             s = load_scenario(directory)
             graph = build_graph(s)
             roads = {r.id: r for r in s.roads}
+            heuristics = {n.id: straight_line_heuristic(s, graph, n.id) for n in s.nodes}
             for start in (n.id for n in s.nodes):
-                distance = {n.id: float("inf") for n in s.nodes}
-                distance[start] = 0
-                # A shortest simple path needs at most V-1 edges; no heap/UCS code is reused.
-                for _ in range(len(s.nodes) - 1):
-                    for r in s.roads:
-                        distance[r.target] = min(distance[r.target], distance[r.source] + r.normal_seconds)
-                for goal, expected in distance.items():
+                for goal in heuristics:
+                    comparison = astar(graph, start, goal, heuristics[goal])
+                    expected = comparison.seconds if comparison is not None else float("inf")
                     route = ucs(graph, start, goal)
                     with self.subTest(scenario=directory.name, start=start, goal=goal):
                         if expected == float("inf"):
@@ -126,12 +123,15 @@ class ScenarioTests(unittest.TestCase):
                             self.assertEqual((route.nodes[0], route.nodes[-1]), (start, goal))
                             self.assertEqual(len(route.roads), len(route.nodes) - 1)
                             # A plausible cost alone is insufficient: validate the returned path too.
-                            total = 0
-                            for a, b, road_id in zip(route.nodes, route.nodes[1:], route.roads):
-                                road = roads[road_id]
-                                self.assertEqual(road.key, (a, b))
-                                total += road.normal_seconds
-                            self.assertAlmostEqual(total, route.seconds)
+                            for selected in (route, comparison):
+                                total = 0
+                                self.assertEqual((selected.nodes[0], selected.nodes[-1]), (start, goal))
+                                self.assertEqual(len(selected.roads), len(selected.nodes)-1)
+                                for a, b, road_id in zip(selected.nodes, selected.nodes[1:], selected.roads):
+                                    road = roads[road_id]
+                                    self.assertEqual(road.key, (a, b))
+                                    total += road.normal_seconds
+                                self.assertAlmostEqual(total, selected.seconds)
 
     def test_status_snapshot_is_directional_and_excludes_blocked_roads(self):
         """Check Blocked/Congested effects without treating reverse roads as identical.

@@ -1,12 +1,19 @@
 # My design decisions and use of the LLM
 
+## Current version and report
+
+The current suite has **175 tests**. The lower test counts below describe earlier development stages, not the current program. The report uses the same Bayesian and HMM examples, .20 road cutoff, .05/.10 bounded-routing settings, strict/late objective order and scenario results as the code and saved comparisons. UCS remains the normal search; A* is implemented and tested for comparison, with no measured speedup claimed.
+
+ChatGPT helped explore and explain the design, while Codex helped generate, document, debug and test the implementation. I steered the work by reviewing examples and changing or rejecting suggestions. A correction to a proposed design is recorded as a design correction, without implying that the rejected proposal was implemented.
+
+
 I used ChatGPT to explore the design and Codex to help implement, document and test the system. I asked for explanations before implementing each major component, questioned the assumptions, and chose which proposals to keep. The LLM contributed code and test cases. I used worked examples, scenario comparisons and a separate check that works through the plan from the original data to examine their behaviour. The exact first main prompt appears at the end.
 
 The four methods have different roles in the design. The Bayesian calculation updates the chances of each road condition using reports that can be wrong. The HMM combines a sequence of noisy traffic readings. Search finds a path using the resulting road estimates and route preferences. CP-SAT chooses who goes to each call while following the assignment rules. Keeping those roles separate makes it possible to test both the calculations and how they affect the final decisions.
 
 ## Questions and corrections that shaped the project
 
-This table paraphrases my questions from the conversation. It distinguishes changes to the implementation from proposals that stayed in discussion.
+This table summarizes the decisions and corrections made during development. It distinguishes changes to the implementation from proposals that stayed in discussion.
 
 | Proposal or issue | What I questioned or corrected | What happened |
 | --- | --- | --- |
@@ -124,7 +131,7 @@ I suggested considering a higher road cutoff for Critical calls when the normal 
 
 The revised proposal compares normal-only and expanded allocations on the same view of the current situation. Fallback would require a demonstrated increase in the number of Critical calls handled. I also questioned a rule that protects the number of lower-priority calls handled because they would deliberately change the existing Critical-first objective. The choice between preserving that priority order and a policy that also protects lower-priority calls remains open.
 
-I noted that the highest edge blockage probability does not measure the chance of encountering any blockage over the whole route. A predicted arrival still assumes the route can be used. I decided to leave this for later and focus on checking the current program, making its results repeatable, and meeting the deadline. The current planner continues to apply its selected road cutoff to every priority. Setting aside busy responders for later calls and the other proposed planning changes also remain future work. [Proposed design](DESIGN.md#proposed-improvement-for-critical-calls)
+I noted that the highest edge blockage probability does not measure the chance of encountering any blockage over the whole route. A predicted arrival still assumes the route can be used. I decided to leave this for later and focus on checking the current program, making its results repeatable, and meeting the deadline. The current planner continues to apply its selected road cutoff to every priority. Setting aside busy responders for later calls and the other proposed planning changes also remain future work. [Proposed design](DESIGN.md#10-proposed-ideas-that-are-not-implemented)
 
 ## 9. Explanations for unhandled calls
 
@@ -135,6 +142,22 @@ The implementation records the existing skill, availability, route and arrival c
 The new tests cover changing reasons, competing calls, missing skills and roads, no responders, late-only candidates, deadlines before release, repeated same-time decisions and solver budget exhaustion. All 160 tests passed. A separate before/after check compared 48 runs across the three scenarios, deadline modes, allocators and routing policies. All original assignments, times, event logs, final states and statistics matched exactly. This adds explanations, not better coverage, guaranteed arrivals or a proof of whole-scenario optimality.
 
 I found the first diagnostic report too difficult to read and asked for simpler wording and a cleaner layout. The text now gives a short reason, deadline, best arrival and how late it would be for each call. Detailed histories remain available separately. This changes presentation only.
+
+## 10. Compare search methods from the course
+
+I asked whether we had compared A* or Dijkstra with our search. UCS uses the same lowest-cost-first principle as Dijkstra. I chose A* from the course for an additional comparison and asked for thorough tests of both algorithms.
+
+A* now follows f = g + h, using straight-line distance divided by maximum road speed as its checked lower bound. The code checks the geometry and graph costs that make this estimate valid. The two all-pairs checks compare A* with UCS across all three scenarios under normal and Bayesian costs. Independent enumeration of every simple path on small graphs checks both algorithms rather than assuming agreement proves correctness. Tests also cover zero-cost cycles, unreachable routes, stale entries, invalid heuristics, overflow and reopening nodes. The final suite passes 175 tests. UCS remains the normal planner; no improvement in response counts or runtime is claimed from this testing change.
+
+## 11. Final report review and proposed next steps
+
+I wanted the report to explain the project without requiring the reader to see the chat. I simplified the wording, kept formulas connected to the course, and separated the inference methods from our own planning choices. The report explains the accepted and rejected suggestions, tests, results and limitations. Its original first substantive prompt matches the prompt preserved below, apart from layout whitespace.
+
+The final review checked the report against the source, the saved comparisons and the Markdown guides. The Bayesian N1→N2 example and Scenario 2 H2→N8 traffic example match recalculated probabilities. Strict CSP handled 6/7, 11/12 and 13/20, with means 91.1, 33.3 and 607.9 seconds. Nearest handled 5/7, 11/12 and 15/20. Allow-late CSP handled all calls but missed 2, 2 and 9 deadlines. The HMM changed seven possible endpoint routes in Scenario 3 but none of the actual committed journeys. These are estimated simulation outcomes, not measured real-world arrivals.
+
+My next-step ideas are to simulate discovering blocked roads and rerouting, test the proposed Critical fallback while reporting coverage and risk together, and consider what happens after treatment. An ambulance may need to take a patient to hospital and remain busy through handover. Other units might return to their station, or remain near the last incident. These trips and availability rules would need their own design and tests. The present code frees responders at the incident when treatment finishes; it does not implement hospital transport, handover or station return. Waiting for a busy responder to serve a second call at the same location also remains a proposal.
+
+Testing exposed a generated validator field mistake, using Responder.location instead of start_location, which was corrected. That remains a concrete debugging example even if the shorter report focuses on the other design corrections. None of these notes changes the algorithms or presents a proposed extension as an implemented feature.
 
 ## Exact first substantive prompt
 

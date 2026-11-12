@@ -20,7 +20,7 @@ from emergency_response.loaders import load_scenario
 from emergency_response.models import Node, Road
 from emergency_response.risk_routing import build_bayesian_graph, route_blockage_bounds
 from emergency_response.routing import build_graph
-from emergency_response.search import Route, ucs
+from emergency_response.search import Route, astar, straight_line_heuristic, ucs
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -123,24 +123,31 @@ class RiskRoutingTests(unittest.TestCase):
         self.assertGreater(independent_example, .2)
         self.assertLessEqual(independent_example, bounds.upper)
 
-    def test_all_pairs_bayesian_graph_against_independent_relaxation(self):
-        """Check all 845 pair costs/unreachability in threshold-.2 snapshots against Bellman-Ford."""
+    def test_all_pairs_bayesian_graph_against_astar(self):
+        """Compare UCS/A* costs, reachability and both paths for 845 Bayesian pairs."""
         for directory in sorted((ROOT / "Scenarios").glob("Scenario*")):
             s = load_scenario(directory)
             graph = build_bayesian_graph(s, infer_scenario(s), blocked_threshold=.2)
-            edges = [(n.id, e.target, e.seconds) for n in s.nodes for e in graph.neighbors(n.id)]
-            for start in (n.id for n in s.nodes):
-                costs = {n.id: float("inf") for n in s.nodes}
-                costs[start] = 0
-                for _ in range(len(s.nodes)-1):
-                    for a, b, cost in edges:
-                        costs[b] = min(costs[b], costs[a]+cost)
-                for goal, expected in costs.items():
-                    route = ucs(graph, start, goal)
-                    if expected == float("inf"):
-                        self.assertIsNone(route)
-                    else:
-                        self.assertAlmostEqual(route.seconds, expected)
+            for goal in (n.id for n in s.nodes):
+                h = straight_line_heuristic(s, graph, goal)
+                for start in (n.id for n in s.nodes):
+                    with self.subTest(scenario=directory.name, start=start, goal=goal):
+                        reference = astar(graph, start, goal, h)
+                        route = ucs(graph, start, goal)
+                        if reference is None:
+                            self.assertIsNone(route)
+                        else:
+                            self.assertIsNotNone(route)
+                            self.assertAlmostEqual(route.seconds, reference.seconds)
+                            for selected in (route, reference):
+                                self.assertEqual((selected.nodes[0], selected.nodes[-1]), (start, goal))
+                                self.assertEqual(len(selected.roads), len(selected.nodes)-1)
+                                total = 0
+                                for a, b, road_id in zip(selected.nodes, selected.nodes[1:], selected.roads):
+                                    edge, = [e for e in graph.neighbors(a)
+                                             if e.target == b and e.road_id == road_id]
+                                    total += edge.seconds
+                                self.assertAlmostEqual(total, selected.seconds)
 
     def test_fastest_accepted_route_is_not_necessarily_safest(self):
         """UCS optimizes the conditional-time score; it does not minimize blockage risk."""

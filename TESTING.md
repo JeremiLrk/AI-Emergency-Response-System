@@ -1,514 +1,206 @@
-# Testing the project
+# Testing the system
 
-## Run every test with one command
+## Yes, we test complete runs
 
-Open a terminal in the repository folder. Use the same environment as the program.
+The tests do more than check individual functions. They also load the real scenarios, run the AI pipeline, simulate every assignment, write the output files and check those files against the original input data.
 
-On Windows with the project environment:
+There are **175 tests**. Several tests run many combinations, so that number is not the number of scenarios or individual examples checked.
+
+## Run everything with one command
+
+Open a terminal in the repository folder. Use the environment where you installed the project requirements.
+
+Windows:
 
 ```powershell
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-If the environment is already active:
+macOS or Linux:
 
-```console
-python -m unittest discover -s tests -v
+```sh
+./.venv/bin/python -m unittest discover -s tests -v
 ```
 
-The command finds every test file in `tests/` and runs it. It currently runs **160 tests**. The menu has its own regression check, and that check exercises all three scenarios. Some individual tests contain many examples, so the test count is smaller than the number of checked cases.
+With that environment already active, `python -m unittest discover -s tests -v` works too. A successful run ends with `Ran 175 tests` and `OK`. `FAIL` means an expected result did not match; `ERROR` means a test could not finish. Runtime depends on the computer. Replace `-v` with `-q` for less output.
 
-`ok` means a test passed. `FAIL` means an assertion did not match the expected result. `ERROR` means a test could not finish because an exception occurred. A successful run ends with `Ran 160 tests` and `OK`. Runtime varies by machine.
+Tests write temporary files and remove them afterwards. The menu test redirects its output folder, so it does not overwrite saved results.
 
-For a shorter summary, replace `-v` with `-q`. To run just the HMM tests:
+## Which tests exercise the whole system?
 
-```powershell
-.\.venv\Scripts\python.exe -m unittest discover -s tests -p test_hmm.py -v
-```
+### The actual scenario menu
 
-Temporary test files are created beneath `tests/` and removed automatically. The menu test redirects exports to a temporary directory, so it can check real output without replacing saved scenario results.
+`test_menu_runs_all_scenarios_and_prints_the_saved_files` in `tests/test_outputs.py` runs `run.main()` as if someone chose Scenario 1, 2 and 3 in the console.
 
-## What the tests check
+It runs the real loader, Bayesian inference, HMM, routing, CP-SAT, simulation, exporter and validator. It checks that both files exist, their contents appear in the console, the settings are correct, and the expected numbers of incidents are handled: **6, 11 and 13**.
 
-| Test file | Tests | What they check |
+The test supplies the menu answer automatically and redirects the output folder. It does not replace the AI calculations with made-up results.
+
+### Eighteen complete scenario combinations
+
+`test_all_three_scenarios_strict_late_and_three_traffic_policies`, also in `test_outputs.py`, checks:
+
+- all three scenarios;
+- strict deadlines and late arrivals allowed;
+- Bayesian-only, HMM tie-breaking and HMM bounded-detour routing.
+
+That is **18 full simulations and exports**. Each generated plan is read back. Its paths and departure times must match the simulation. Independent validation must reconstruct the same travel, arrival, treatment completion and statistics. The test also checks Critical coverage, unhandled work, late responses and responders taking several jobs over time.
+
+Other tests run the command-line program and standalone validator as separate processes. They check output folders, console JSON, scripts, file names and exit codes. Route-only inspection must not write a plan.
+
+### Checks that diagnoses leave planning unchanged
+
+The diagnostic test runs all three scenarios in strict and late mode with recording switched on and off. Apart from the new explanation field, the complete results must be equal: assignments, times, events, final states, plans and statistics.
+
+During development, we also saved **48 runs before the diagnostic change** and compared them with the changed program. These covered three scenarios, two deadline rules, two allocators and four routing settings. Every original result matched exactly. The same saved comparison was checked after adding A*. This was a before/after check, not a separate planner used to explain calls.
+
+## What the smaller tests check
+
+| File | Tests | Main checks |
 | --- | ---: | --- |
-| `test_foundation.py` | 6 | Basic UCS paths, directed and parallel roads, zero-cost cycles, invalid inputs, raw readers and travel-sum overflow. |
-| `test_scenarios.py` | 12 | Actual schemas and counts, units, capabilities, initial availability, release visibility, and rejected or warned-about broken input. All 845 ordered node pairs are compared with a separate Bellman–Ford calculation. |
-| `test_bayesian.py` | 11 | Worked probabilities, missing reports and weather, conflicting reports, directionality and unchanged input. |
-| `test_risk_routing.py` | 11 | Road cutoffs, conditional travel estimates, risk bounds, directionality, search integration and CLI options. |
-| `test_hmm.py` | 8 | The real five-step example, independent sums over hidden sequences, scenario priors, directed histories, validation and long-sequence normalization. |
-| `test_traffic_routing.py` | 11 | Exact and near time ties, bounded detours, exposure reduction, multiple route labels, search limits, exhaustive path checks and actual simulator durations. |
-| `test_diagnostics.py` | 12 | Changing reasons, competing assignments, missing skills and routes, no responders, pre-release deadlines, late candidates, solver budget exhaustion, no extra search/dispatch calls, same-time decisions, exports, and identical recording-on/off execution for all three scenarios. |
-| `test_simulation.py` | 27 | Release times, simultaneous events, busy responders, travel and treatment, later locations, zero-duration jobs, deadlines, invalid dispatch batches and current-only snapshots. |
-| `test_scripted.py` | 6 | Script structure, time ordering, simultaneous requests, consuming a timestamp once, and CLI execution and errors. |
-| `test_allocation.py` | 21 | Priority order, exclusivity, responder choice, response-time objectives, small exhaustive models, real scenarios and solver statuses or time limits. |
-| `test_statistics.py` | 9 | Waiting time in response, late completions, unhandled work, empty denominators, and default or comparison CLI results. |
-| `test_plan_validation.py` | 14 | Independent replay, duplicate calls, skills, release, availability, directed routes, location updates, treatment, deadlines, bad JSON and model settings. |
-| `test_outputs.py` | 12 | Exact plan fields and start times, file contents, strict and late plans in all scenarios, bad timing rejection, Critical coverage text, menu choices and console output, comparison folders and validator exit codes. |
+| `test_foundation.py` | 6 | Hand-checkable UCS routes, directed and parallel roads, zero-cost cycles, invalid input, readers and travel-sum overflow. |
+| `test_scenarios.py` | 12 | Actual file contents, units, skills, availability, release times, damaged inputs and 845 UCS/A* node-pair comparisons. |
+| `test_astar.py` | 15 | A* stopping and reopening rules, invalid estimates, overflow, geometry, actual heuristic bounds and independently checked paths. |
+| `test_bayesian.py` | 11 | Worked probabilities, missing reports/weather, report order, conflicting evidence, separate road directions and unchanged inputs. |
+| `test_risk_routing.py` | 11 | Cutoff boundaries, estimated road times, route-risk bounds, directed routes, CLI options and another 845 UCS/A* comparisons. |
+| `test_hmm.py` | 8 | The five-reading example, missing-history priors, direction, normalization, invalid observations and independent hidden-state calculations. |
+| `test_traffic_routing.py` | 11 | Equal-time routes, permitted detours, exposure reduction, alternative paths, search limits and the selected route's actual travel duration. |
+| `test_simulation.py` | 27 | Releases, simultaneous events, busy units, locations, travel, treatment, zero-duration jobs, deadlines and rejected assignments. |
+| `test_scripted.py` | 6 | Script parsing, simultaneous requests, consuming a time once, extra decision times and CLI errors. |
+| `test_allocation.py` | 21 | Priority order, responder conflicts, choosing compatible pairs, small exhaustive models, real scenarios and solver limits/statuses. |
+| `test_statistics.py` | 9 | Waiting time, late and unhandled calls, empty averages, default execution and allocator comparisons. |
+| `test_plan_validation.py` | 14 | Original-data replay, skills, releases, overlapping jobs, directed roads, treatment, deadlines, JSON errors and policy settings. |
+| `test_outputs.py` | 12 | Full runs, exact plan fields, departure times, printed/saved files, menu behaviour, comparison folders and validator exits. |
+| `test_diagnostics.py` | 12 | Reasons changing over time, competing calls, no responders/routes/skills, late candidates, solver timeout and unchanged planning. |
 
-## Why these tests are useful
-
-Several expected answers come from calculations separate from the code being tested. Examples include hand-calculated probabilities, enumerating possible hidden states, checking routes with Bellman–Ford, and enumerating small route and assignment choices.
-
-The integration tests then connect those parts. They check that a selected route's travel seconds determine arrival and treatment completion, that responders cannot be assigned twice, and that exported files match the original-data replay.
-
-Solver status tests deliberately simulate time limits and different statuses. This makes those branches repeatable instead of depending on how fast a particular computer is.
-
-The text-format checks use the displayed rounding. They also compare the underlying full-precision statistics with independent replay. The Critical summary checks counts, the all-handled answer and the IDs of missed Critical calls.
-
-## Current review results
-
-The November 2026 code review first reran all 145 existing tests and checked the source and documentation. It then added three focused tests, bringing the total to **148**, and strengthened assertions in existing export tests.
-
-The new checks cover the complete no-argument scenario menu, invalid input and clean exit, and overflow in a scalar UCS path sum. A sum that is too large now raises a clear error. Previously it could look like an unreachable destination. The supplied scenarios do not approach that numeric limit.
-
-The current suite passed all 148 tests. The project dependency check also passed with:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip check
-```
-
-## What a passing suite can establish
-
-Passing tests support the stated behaviour for these cases. They do not measure real-world road safety or prediction accuracy. Bayesian inference is shared by planning and replay, so the separate arithmetic tests are important. There is no measured line or branch coverage percentage, and this review makes no claim of 100% coverage.
-
-The solver handles the current snapshot. A proven current decision does not prove best coverage across a whole future scenario. The HMM uses old readings, and the simulation has no sampled road blockage or recovery event.
-
-The bounded route search has an explicit label limit for larger graphs. Unit tests exercise that error, while the supplied graphs are small. The tests verify that the allocator sees only released incidents. Arbitrary Python callbacks could still read external files themselves.
-
-## Earlier development stages and measured comparisons
-
-The sections below keep the original test counts and results as development history. Their statements about what was still missing apply to those earlier checkpoints. The current run command and current test count are given above.
-
-### Original foundation checkpoint
-
-Run from the repository root with Python 3.10+:
+To run one group, for example HMM tests:
 
 ```console
-python -m unittest discover -s tests -v
-python run.py Scenarios/Scenario1 --route H1 N2
-python run.py Scenarios/Scenario2
-python run.py Scenarios/Scenario3
+python -m unittest discover -s tests -p test_hmm.py -v
 ```
 
-The original seventeen foundation tests still cover:
+### We do not rely only on two algorithms agreeing
 
-* Handwritten UCS: cheaper indirect routes, goal testing on removal, stale heap
-  entries, disconnected/directed graphs, parallel edges, zero-cost cycles,
-  start=goal, invalid nodes and costs.
-* Raw readers: BOMs, string IDs, quoted CSV fields, malformed rows/headers,
-  duplicate JSON keys and nonstandard numeric constants.
-* All three real schemas, expected counts, units, capability splitting,
-  initial availability and time-based incident visibility.
-* All **845** ordered node pairs (25+144+676) under normal all-open costs,
-  compared with an independent Bellman-Ford relaxation calculation. Returned
-  route endpoints, directed road IDs, adjacency and summed cost are checked.
-* Caller-supplied Blocked/Congested road snapshots and direction separation.
-* Corrupted fixtures: unknown endpoint, zero speed, conflicting local weather,
-  duplicate historical index, inconsistent availability, invalid probability
-  labels/ranges/sums; also reversed history ordering and fractional availability.
-* Deadline-before-release is retained as a warning rather than silently changed.
+The UCS/A* comparisons cover **845 ordered node pairs per graph type**: 25 in Scenario 1, 144 in Scenario 2 and 676 in Scenario 3. They include staying at the same node. Both returned paths are checked, not just their costs. Different equal-cost paths are allowed.
 
-Baseline Scenario1 H1 -> N2 returns the direct road, 48.06666666666667 seconds.
-This ignores noisy blockage reports and traffic deliberately; it demonstrates
-unit-correct routing, not a valid dispatch decision under uncertain conditions.
+A separate test tries every simple path on 30 small five-node graphs: **750 start/goal cases**. Both UCS and A* must match those independently calculated minimum costs. Other tests check stale queue entries, a costly goal discovered first, and reopening a node after finding a cheaper path. A zero heuristic must behave like UCS. Actual scenario checks verify the straight-line heuristic never overestimates or breaks its edge-by-edge lower-bound rule, allowing only `1e-10` for floating-point rounding in those assertions. Routing itself uses no such tolerance. No A* speed advantage has been measured.
 
-The additional Bayesian/policy tests below check model arithmetic and integration.
-They do **not** establish full-plan validity, scheduling feasibility, real-world
-probabilistic calibration, HMM correctness or solver performance. No plan or
-handled-incident statistics are generated at this stage.
+The same idea is used elsewhere: hand-calculated Bayesian results, explicit sums over hidden HMM sequences, all compatible subsets of small CSP models, and exhaustive small detour paths. The HMM tests include all 27 hidden sequences for a three-reading example and normalization over 10,000 readings. Detour tests include 30 small generated acyclic graphs.
 
+Some solver tests deliberately imitate `FEASIBLE`, `UNKNOWN`, exhausted budgets and model errors. This reliably exercises those branches. Other tests use the real solver. We never treat an unproven feasible solution as a proved optimum.
 
-## Bayesian checkpoint: 39 tests total
+## What we measured on the scenarios
 
-```console
-python -m unittest discover -s tests -v
-python run.py Scenarios/Scenario1 --route N1 N2 --routing-policy bayesian --block-threshold 0.2
-```
+The saved comparisons use blockage cutoff **.20**, solver budget **2 seconds per decision**, one worker, seed zero and integer-millisecond response objectives. The tested setup was Python 3.12.14 with OR-Tools 9.15.6755. Costs and simulation times are still estimates; no hidden road truth is sampled.
 
-All 17 existing tests and 22 new tests pass. New coverage includes manually
-calculated conflicting/reverse-road posteriors, known/unknown weather, no/partial
-reports, explicit full-joint enumeration summing out missing evidence, evidence
-order invariance, no input mutation, all-road scenario coverage, local weather,
-invalid inputs and zero-likelihood diagnostics. Scenario copies constructed
-directly also reject duplicate reports and conflicting weather.
+### Allocation and deadline results
 
-Policy tests check conditional-time normalization, threshold boundaries, certain
-blockages, missing/invalid beliefs, directed exclusions, no-route cases, static
-repeated-road bounds and start=goal. A constructed two-edge example shows an
-edge threshold is not a route risk cap. Another example verifies the policy can
-choose a faster, riskier route over a slower safer one; this limitation is visible
-and intentional, not silently called a safest-route algorithm. CLI tests confirm
-full distributions/risk bounds and explicit policy selection.
-
-All 845 ordered node pairs are also compared with independent Bellman-Ford
-relaxation on Bayesian threshold-.2 graphs, in addition to the original 845
-baseline comparisons. Unreachable results are checked as well as finite costs.
-
-Verified Scenario1 N1->N2:
-
-| Policy | Route | Travel score (s) | Modeled blockage bounds |
-| --- | --- | ---: | --- |
-| All-open baseline | N1->N2 | 51.6666666667 | .5268817204 to .5268817204 |
-| Bayesian threshold .20 | N1->H1->N2 | 86.7780346821 | .135 to .27 |
-| Bayesian threshold .10 | None | N/A | N/A |
-
-The Bayesian score sums per-edge expected times conditional on each edge being
-traversable. It is not an unconditional expected arrival. The bounds require no
-cross-road independence, but remain conditional on the correctness of the model.
-
-## Measured threshold sensitivity on supplied datasets
-
-These are graph reachability checks, not dispatch outcomes. Pairs exclude
-start=goal. Thresholds are illustrative and are never silently adjusted.
-
-| Scenario | Threshold | Retained edges | Reachable distinct pairs |
-| --- | ---: | ---: | ---: |
-| Scenario1 | .10 | 2/14 | 3/20 |
-| Scenario1 | .20 | 10/14 | 20/20 |
-| Scenario1 | .50 | 10/14 | 20/20 |
-| Scenario1 | .90 | 12/14 | 20/20 |
-| Scenario2 | .10 | 12/30 | 16/132 |
-| Scenario2 | .20 | 28/30 | 60/132 |
-| Scenario2 | .50 | 28/30 | 60/132 |
-| Scenario2 | .90 | 30/30 | 132/132 |
-| Scenario3 | .10 | 12/60 | 20/650 |
-| Scenario3 | .20 | 58/60 | 650/650 |
-| Scenario3 | .50 | 58/60 | 650/650 |
-| Scenario3 | .90 | 60/60 | 650/650 |
-
-Scenario2's .20 policy removes N1->N2 and N2->N1 (posterior blockage .8301957831
-each), disconnecting parts of the planning graph. A stricter threshold can make
-valid real-world routes unavailable to the planner; a permissive one can retain
-substantial risk. No true-state files are supplied, so these data cannot establish
-which policy is actually safer or measure forecast calibration.
-
-
-## Simulation checkpoint: 72 tests total
-
-All 39 existing tests and 33 new simulation/script tests pass. Run:
-
-```console
-python -m unittest discover -s tests -v
-python run.py Scenarios/Scenario1 --simulate-script examples/scenario1_script.json --routing-policy bayesian --block-threshold 0.2
-```
-
-Simulation tests cover batched simultaneous releases, completion+release equality,
-updated departure locations, initially busy readiness (including zero), travel
-followed by service, positive/zero durations, chained zero jobs at an exact
-deadline, inclusive arrival deadlines, and service finishing after a deadline.
-They also cover strict rejection/closure, late departure and late completion with
-independent missed outcomes, unreachable work, empty decisions, future releases,
-past-deadline releases, fractional and near-but-distinct timestamps, explicit
-wake-ups, finite empty-input termination and unrepresentable float time advances.
-
-Snapshot tests inspect every revealed timestamp/candidate ID, verify no Scenario
-or event queue is exposed, and attempt mutation of frozen views. They also verify
-earlier snapshots and original inputs/graph stay unchanged. Invalid duplicate
-responder/incident batches are checked for zero partial commits. Premature,
-unqualified and busy dispatches are rejected; new critical incidents do not
-preempt an already travelling responder.
-
-Script/CLI tests cover parsing, simultaneous grouping, input copying, consume-once
-behavior, malformed times/IDs/options, full Bayesian+simulation JSON and allow-late
-completed/missed outcomes. All three real scenarios run with a no-op dispatcher in
-strict and late modes: all incidents are revealed and explicitly unhandled/missed,
-with finite termination. This verifies stream mechanics, not allocation quality.
-
-The real Scenario1 script completes four incidents, all with modeled deadlines met;
-three are explicitly closed_unassigned/missed. Final event is I5 completion at
-217.3471400394 seconds. Its arrival is 197.3471400394, before deadline 200. R4's
-initial busy state lasts to 10, then its I1 arrival is 66.9687861272. R1 finishes
-I2 at 116.7780346821, remains at N2, and departs for I5 at scripted time 120.
-
-An independent replay test checks each real-script commitment's release,
-capability, initial/later availability, updated location, graph adjacency/road ID,
-summed edge time, arrival deadline, treatment duration and incident uniqueness.
-This adds evidence beyond asserting engine output fields; it is not yet a general
-standalone plan-validator module or empirical validation of uncertain travel.
-
-Limitations: scripts are fixtures, not an allocation algorithm; no solver/HMM or
-final plan/statistics files are implemented. Execution follows estimates without
-sampled road truth or unexpected delay. A completed/met modeled job is therefore
-not evidence of guaranteed real-world safety or calibrated forecast performance.
-
-
-## CP-SAT checkpoint: 102 tests total
-
-Use the project virtual environment and pinned dependency:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m unittest discover -s tests -v
-.\.venv\Scripts\python.exe benchmark.py --block-threshold 0.2
-```
-
-All 72 existing tests plus 30 new allocation/statistics/CLI tests pass. Two old
-CLI rejection cases were updated because normal runs now execute automatically:
-Bayesian mode with a supplied threshold no longer requires --route/script, and
---allow-late is valid for normal execution. Their replacement cases still check
-missing Bayesian thresholds and meaningless --allow-late in route-only mode;
-new positive tests cover the changed default/late interfaces.
-
-New tests cover priority versus faster lower-priority response, absence of deadline
-ranking, response including dispatch waiting, joint assignment preserving a flexible
-unit, choosing between responders, optional unassigned work, on-time preference
-after priority coverage in late mode, snapshot/immutability/future checks, integer
-precision and budget validation. Independent exhaustive subset enumeration checks
-the full objective on small models and actual Scenario2's seven initial candidates.
-
-Controlled mocked solver outcomes test FEASIBLE, UNKNOWN before/after an incumbent,
-shared-budget exhaustion between phases, zero budget, MODEL_INVALID and INFEASIBLE.
-They verify that values are never read without a feasible solution, unproven
-priority counts are never fixed as optimal, previous valid solutions are retained,
-and model errors are not disguised as no feasible emergencies. Real solver tests
-verify actual constraints/objectives; mocked tests target status-control branches.
-
-All three real scenarios run under both allocators and both deadline policies.
-An independent replay checks every commitment's incident release, capability,
-readiness/nonoverlap, updated origin, graph edge IDs/costs, arrival and treatment
-times, strict deadlines and uniqueness. The allocator wrapper inspects every
-snapshot for early incident exposure. Metrics tests cover empty/no-handled runs,
-late-completed versus on-time counts, all/handled denominators and waiting time.
-
-### Measured comparison
-
-Bayesian threshold .20, CP-SAT shared budget 2s/decision, response precision 1ms,
-one worker/seed 0, fixed modeled execution. Average response uses completed work
-only. All CP-SAT decisions were proven optimal or trivially had no candidates;
-there were no time-limit fallbacks in this evaluation. Nearest uses no solver.
-
-| Scenario | Deadline mode | Allocator | Handled | Deadlines met | Avg response (s) |
+| Scenario | Deadline rule | Allocator | Handled | On time | Mean response (seconds) |
 | --- | --- | --- | ---: | ---: | ---: |
-| Scenario1 | strict | csp | 6/7 | 6/7 | 91.113 |
-| Scenario1 | strict | nearest | 5/7 | 5/7 | 82.438 |
-| Scenario1 | allow_late | csp | 7/7 | 5/7 | 102.276 |
-| Scenario1 | allow_late | nearest | 7/7 | 5/7 | 98.938 |
-| Scenario2 | strict | csp | 11/12 | 11/12 | 33.253 |
-| Scenario2 | strict | nearest | 11/12 | 11/12 | 33.253 |
-| Scenario2 | allow_late | csp | 12/12 | 10/12 | 32.782 |
-| Scenario2 | allow_late | nearest | 12/12 | 10/12 | 32.782 |
-| Scenario3 | strict | csp | 13/20 | 13/20 | 607.937 |
-| Scenario3 | strict | nearest | 15/20 | 15/20 | 586.235 |
-| Scenario3 | allow_late | csp | 20/20 | 11/20 | 1408.182 |
-| Scenario3 | allow_late | nearest | 20/20 | 12/20 | 1378.635 |
+| 1 | Strict | CSP | 6/7 | 6/7 | 91.113 |
+| 1 | Strict | Nearest | 5/7 | 5/7 | 82.438 |
+| 1 | Allow late | CSP | 7/7 | 5/7 | 102.276 |
+| 1 | Allow late | Nearest | 7/7 | 5/7 | 98.938 |
+| 2 | Strict | CSP | 11/12 | 11/12 | 33.253 |
+| 2 | Strict | Nearest | 11/12 | 11/12 | 33.253 |
+| 2 | Allow late | CSP | 12/12 | 10/12 | 32.782 |
+| 2 | Allow late | Nearest | 12/12 | 10/12 | 32.782 |
+| 3 | Strict | CSP | 13/20 | 13/20 | 607.937 |
+| 3 | Strict | Nearest | 15/20 | 15/20 | 586.235 |
+| 3 | Allow late | CSP | 20/20 | 11/20 | 1408.182 |
+| 3 | Allow late | Nearest | 20/20 | 12/20 | 1378.635 |
 
+CSP handles one more Critical call than nearest in strict Scenario 1. Scenario 2 ties. In strict Scenario 3, nearest handles two more Critical calls. An early equal-cost assignment changes the locations of differently skilled responders for later medical calls. The solver can be optimal for its current decision without producing the best complete run.
 
-Reproduce using benchmark.py; results/allocation_comparison.json contains all
-unrounded metrics, per-priority counts, configurations, status/proof counts and
-commitments. An exact JSON-normalized repeat matched all of those fields.
+Allowing late responses handles every incident in these examples, but can reduce on-time coverage: a late job can occupy a responder needed later. Average response includes waiting and travel for handled calls only, so compare it together with coverage. Different handled subsets make the means an incomplete comparison.
 
-Interpretation: Scenario1 strict CSP serves an additional Critical incident; its
-higher mean is not directly comparable to nearest's smaller handled subset.
-Scenario2 ties. Scenario3 strict nearest serves two more Critical incidents than
-the locally optimal CSP run; the initial equal-cost responder tie changes later
-Medical emergency coverage. With late responses, all incidents are completed in
-these examples, but deadline counts can be worse than strict mode because earlier
-late commitments consume resources. Local optimality never implies a globally
-optimal event sequence or best real-world outcome.
+The saved runs proved all relevant CSP objectives or had no candidates. Timeouts did not cause these benchmark outcomes. Different versions or platforms can resolve equal-cost ties differently.
 
-No EDF/rank term was added to fix disappointing results, and no threshold was
-silently relaxed. Tie outcomes are pinned only by tested environment/configuration,
-not promised identical across all OR-Tools versions. This earlier comparison has
-no HMM preference or hidden-road execution; these statistics are modeled outcomes and no standalone final
-submission-format plan/statistics files are generated yet.
+Reproduce the comparisons with an active environment:
 
-## Historical HMM checkpoint: 121 tests total
-
-The earlier 102 tests still pass, unchanged. Nineteen new tests cover:
-
-- Actual Scenario2 H2->N8 numerical results at all five prefixes, using the
-  supplied initial, transition and emission tables (see DESIGN.md for numbers).
-- Independent enumeration of all 27 hidden paths for a three-observation example,
-  confirming Forward sums paths rather than selecting a maximum sequence.
-- Scenario-specific missing-history priors, reverse-road separation, normalization,
-  all-road coverage and counts, input immutability and sorting by historical ordinal.
-- Invalid history references/indices, invalid state vocabulary, zero-likelihood
-  evidence, and normalization of 10000 observations without sequence underflow.
-- Exact-time ties versus near ties; explicit travel allowance and exposure gate;
-  multiple Pareto labels at a shared node; zero-cost cycles and unreachable roads.
-- Independent exhaustive simple-path enumeration on 30 seeded small DAGs, checking
-  the bounded optimum and acceptance gate, plus explicit label-limit errors.
-- Directed metadata checks and CLI bounded-route output/configuration rejection.
-- Actual graph all-pairs checks: exact tie preserves minimum travel; bounded time
-  stays within 5%; every returned duration equals original graph edge sums and
-  graphs remain unchanged. This does not claim real-world travel calibration.
-- Simulator selected route travel=21, treatment=7 => arrival21/completion28,
-  rather than using exposure2.1. With deadline20.5 strict mode keeps shortest20;
-  late mode accepts21 and records missed. A forged zero duration is rejected.
-
-Run from repository root:
-
-```powershell
-.\.venv\Scripts\python.exe -m unittest discover -s tests -v
-.\.venv\Scripts\python.exe benchmark_traffic.py --block-threshold .2 --max-extra-fraction .05 --min-exposure-reduction .10
+```console
+python benchmark.py --block-threshold .2
+python benchmark_traffic.py --block-threshold .2 --max-extra-fraction .05 --min-exposure-reduction .10
 ```
 
-The full suite passes: 121 tests. No existing tests were removed or weakened.
-Python3.12.14 / OR-Tools9.15.6755. HMM calculations use Python standard library;
-the only solver dependency remains the previously pinned OR-Tools package.
+Full results are in [allocation_comparison.json](results/allocation_comparison.json) and [traffic_comparison.json](results/traffic_comparison.json). These include assignments, unrounded statistics, settings and solver information.
 
-### Fixed-parameter comparison on all three scenarios
+### Did the HMM change anything?
 
-Before evaluation, maximum extra travel=.05 and minimum exposure reduction=.10
-were declared. Bayesian blockage threshold=.20 remains the previous comparison
-setting. Solver budget2s, one worker, seed0, response scale1000 remain unchanged.
-No tuning after seeing results. Report: results/traffic_comparison.json, containing
-36 fresh runs (3 scenarios x 2 deadline modes x 2 allocators x 3 route policies),
-complete assignments, per-assignment exposures/time detours/blockage bounds,
-priority counts, solver status and explicit changes from Bayesian-only.
+The traffic comparison runs **36 combinations**: three scenarios, two deadline rules, two allocators and three route policies. The 5% extra-time allowance and 10% minimum exposure reduction were chosen before looking at results.
 
-For EVERY row below, Bayesian-only, hmm-tie and hmm-bounded produce the same
-assignments, routes, departures, handled counts, met counts and average responses:
+Both HMM policies produced the same actual assignments, committed routes, departure times and statistics as their matching Bayesian-only run. There were no committed detours and no timeouts explaining that result.
 
-| Scenario | Mode | Allocator | Handled/total | Met/total | Mean response seconds |
-| --- | --- | --- | ---: | ---: | ---: |
-| 1 | strict | CSP | 6/7 | 6/7 | 91.113 |
-| 1 | strict | nearest | 5/7 | 5/7 | 82.438 |
-| 1 | allow late | CSP | 7/7 | 5/7 | 102.276 |
-| 1 | allow late | nearest | 7/7 | 5/7 | 98.938 |
-| 2 | strict | CSP | 11/12 | 11/12 | 33.253 |
-| 2 | strict | nearest | 11/12 | 11/12 | 33.253 |
-| 2 | allow late | CSP | 12/12 | 10/12 | 32.782 |
-| 2 | allow late | nearest | 12/12 | 10/12 | 32.782 |
-| 3 | strict | CSP | 13/20 | 13/20 | 607.937 |
-| 3 | strict | nearest | 15/20 | 15/20 | 586.235 |
-| 3 | allow late | CSP | 20/20 | 11/20 | 1408.182 |
-| 3 | allow late | nearest | 20/20 | 12/20 | 1378.635 |
+The wider route check did find possible differences:
 
-There are zero added/removed assigned incidents, changed responders, changed
-committed routes or departures, and zero committed detours, for both HMM policies
-against their matching Bayesian-only run. All CSP decision hierarchies were
-proven; no unproven fallback explains the unchanged result. Means are over
-completed incidents, include release-to-dispatch waiting, and exclude treatment.
-Different allocator coverage still makes means alone an incomplete comparison.
-
-The broader all-pairs audit includes reachable start=goal pairs:
-
-| Scenario | Reachable pairs | Exact-tie route changes | Bounded route changes |
+| Scenario | Reachable pairs, including same-node | Equal-time route changes | Bounded-detour changes |
 | --- | ---: | ---: | ---: |
 | 1 | 25 | 0 | 0 |
 | 2 | 72 | 0 | 0 |
 | 3 | 676 | 0 | 7 |
 
-Seven changed directed pairs are N3->H1, H1->N1, H1->N3, H1->N7, H1->N20,
-H1->P1 and P1->H1. These are not routes committed by either allocator in either
-deadline mode. A concrete example is N3->H1:
+The seven changed directions are N3→H1, H1→N1, H1→N3, H1→N7, H1→N20, H1→P1 and P1→H1. None was dispatched in these runs.
 
-- Shortest: N3-N4-N9-H1, 1302.620309 seconds, exposure112.653333.
-- Bounded: N3-N5-N8-H1, 1331.570578 seconds, exposure62.005453.
-- Extra time28.950269 seconds (about2.22%, within5%); exposure falls44.96%,
-  above the required10%. The new route duration is1331.570578, NOT62.005453.
+For N3→H1, the shortest route is N3–N4–N9–H1: 1302.620309 seconds and exposure 112.653333. The alternative is N3–N5–N8–H1: 1331.570578 seconds and exposure 62.005453. That is 28.950269 seconds, or about 2.22%, slower for 44.96% less exposure. Its travel duration is **1331.570578**, not its exposure score. Reverse directions can have different scores.
 
-The opposite direction has different exposure reduction because histories are
-directed. The report preserves all seven alternatives for inspection. Synthetic
-tests establish policy behavior even where these three simulations do not use
-the affected endpoints. There is no evidence here of improved emergency outcomes;
-do not increase the allowance retrospectively to manufacture improvement.
+A small timing test makes the distinction explicit: selected travel 21 seconds plus treatment 7 gives arrival 21 and completion 28, not arrival at exposure 2.1. With deadline 20.5, strict mode keeps the 20-second shortest route; late mode can select 21 and records the miss. Invented route durations are rejected.
 
-Limitations: historical beliefs have unknown age, no live evidence, no hidden
-traffic/road truth or recovery simulation, no traffic calibration, and no proof
-that historical High exposure measures actual safety. A lower score can increase
-route-level blockage bounds. Strict travel feasibility is preserved, but allowing
-late responses can let a detour miss a previously achievable deadline. The
-allocator sees one route per pair; this is not joint route/allocation optimization.
-The bounded search is exact under its finite floating-cost model when it finishes,
-but can hit its explicit label guard on larger graphs. Existing Scenario3 CSP
-versus nearest underperformance is preserved and explained above.
+### How much does the road cutoff remove?
 
-## Required outputs and independent plan validation: 145 tests total
+These are graph checks, not incident-handling counts. Same-node pairs are excluded here.
 
-Assignment sections5.1/5.2 were checked against the provided PDF before changing
-run.py. Scenarios/README.md confirms fractional seconds, dispatch start times and
-historical observations. The exact list/row schema is tested; required plan rows
-have only responder_id,incident_id,path,time. Statistics definitions are unchanged.
+| Scenario | Cutoff | Roads kept | Reachable different-node pairs |
+| --- | ---: | ---: | ---: |
+| 1 | .10 | 2/14 | 3/20 |
+| 1 | .20 | 10/14 | 20/20 |
+| 1 | .50 | 10/14 | 20/20 |
+| 1 | .90 | 12/14 | 20/20 |
+| 2 | .10 | 12/30 | 16/132 |
+| 2 | .20 | 28/30 | 60/132 |
+| 2 | .50 | 28/30 | 60/132 |
+| 2 | .90 | 30/30 | 132/132 |
+| 3 | .10 | 12/60 | 20/650 |
+| 3 | .20 | 58/60 | 650/650 |
+| 3 | .50 | 58/60 | 650/650 |
+| 3 | .90 | 60/60 | 650/650 |
 
-The full suite passes145 tests (previous121 plus24). Existing CLI tests now use
-temporary --output-dir locations because execution intentionally writes artifacts;
-their previous behavioral assertions remain. No tests were removed or weakened.
-Temporary test outputs are contained beneath tests/ and cleaned up automatically.
+In Scenario 2, cutoff .20 removes N1↔N2, whose blockage probability is about .8301957831 in each direction. That disconnects parts of the usable graph. More reachable pairs do not prove that a more permissive cutoff is safer.
 
-New tests cover:
+## File validation and useful examples
 
-- Original-data reconstruction: travel5, treatment2, deadline5 means arrival5
-  meets the deadline even though completion7 is later.
-- Empty valid plans versus poor coverage, N/A response mean, zero/all-incident
-  deadline percentage, and N/A for an empty incident stream.
-- Exact list/row schema; unknown IDs/nodes; empty/non-list paths; extra fields;
-  negative, boolean, nonnumeric, huge/unrepresentable and nonfinite start times.
-- Strict JSON decoding rejects duplicate keys, malformed JSON and NaN/Infinity.
-- Duplicate incidents, including two different responders assigned the same call.
-- Capability, release and initially busy checks, including exact readiness time.
-- Directed roads, initial/current path endpoints, and location after earlier work.
-- One responder handling consecutive incidents: next dispatch must wait through
-  travel AND treatment; exact completion reuse and zero-duration same-time reuse
-  are allowed. Chronologically unsorted plan rows are replayed correctly.
-- Bayesian conditional travel6.875 from controlled original-road time5 and beliefs
-  (.2,.6,.2), and rejection at the exact blockage threshold. The validator uses
-  its own road cost reconstruction rather than a trusted graph.
-- Strict late-arrival rejection versus explicit late-policy warnings/compliance.
-- No simulator/UCS/graph-builder calls during validation (patched to fail if used).
-- Tampered simulation travel, arrival, completion or final statistics cause export
-  rejection BEFORE writing either file.
-- Departure/start3 differs from release1 and arrival8; response7 includes waiting,
-  treatment finishes10; exported time remains3.
-- CLI writes required names, default working-directory behavior, separate comparison
-  output directories, script export, route-only no-export and standalone exit codes.
-- A scripted late export validates only with explicit --allow-late; strict validation
-  fails with deadline errors, while the late report remains deadline_compliant=false.
+Six strict/late exports are saved under `results/plans/ScenarioN/`. Three normal menu runs are under `results/menu/ScenarioN/`. The six exports' independent checks are recorded in [plan_export_validation.json](results/plan_export_validation.json). All pass under their declared rule. Late plans are valid only under the allow-late rule; they do not satisfy every arrival deadline.
 
-Actual-scenario integration covers18 simulations (3 scenarios x strict/late x
-Bayesian-only/tie/bounded policies). Each file is read back; every path/time equals
-the corresponding simulation commitment; independent arrival/completion and
-Statistics equal the execution output. Tests assert expected handled/deadline
-counts and responders reused across multiple incidents. Both unhandled strict
-calls and completed late calls are covered.
+The validator tests include a deliberately empty valid plan, damaged JSON, duplicate incidents, impossible skills/releases, initially busy units, repeated jobs, exact completion-time reuse and zero-duration reuse. They check out-of-order plan rows too. Export refuses fabricated travel, arrival, completion or summary values before writing either output file.
 
-### Saved CLI exports
+Some hand-checkable examples:
 
-results/plans/ScenarioN/strict and allow_late contain six generated plan/statistics
-pairs. They use CSP, Bayesian threshold.20, bounded allowance.05, minimum exposure
-reduction.10, default2s solver budget, worker1/seed0. These unchanged settings were
-not tuned for this task. results/plan_export_validation.json records standalone
-validator results and file-versus-stdout agreement for all six CLI runs.
+- Travel 5 plus treatment 2 with deadline 5 is on time: arrival is 5, completion is 7.
+- Release 1, departure 3, travel 5 gives arrival 8 and response 7. The exported `time` is 3. Treatment 2 finishes at 10.
+- Normal road time 5 with beliefs (.2, .6, .2) gives passable-road time 6.875. Equality with the blockage cutoff rejects an edge.
+- Scenario 1's all-open H1→N2 route takes 48.0666666667 seconds. This is a route demonstration, not a dispatch result.
+- Scenario 1 N1→N2 takes 51.6666666667 all-open seconds. With cutoff .20 it detours via H1 in 86.7780346821 seconds, with blockage bounds [.135, .27]. At cutoff .10 no route is allowed. The direct road's blockage probability is .5268817204.
 
-| Scenario | Mode | Handled | Met | Mean response seconds | Policy-valid | All assigned arrivals on time |
-| --- | --- | ---: | ---: | ---: | --- | --- |
-| 1 | strict | 6/7 | 6 | 91.113 | yes | yes |
-| 1 | allow late | 7/7 | 5 | 102.276 | yes | no |
-| 2 | strict | 11/12 | 11 | 33.253 | yes | yes |
-| 2 | allow late | 12/12 | 10 | 32.782 | yes | no |
-| 3 | strict | 13/20 | 13 | 607.937 | yes | yes |
-| 3 | allow late | 20/20 | 11 | 1408.182 | yes | no |
+The scripted Scenario 1 example deliberately handles four calls, not all seven:
 
-Strict plans are feasible under the declared travel estimates while leaving
-1,1,7 incidents unhandled. Late plans complete all incidents but do not satisfy
-every assignment arrival deadline; the relaxed-policy label is essential.
-Exporting does not alter routing/allocation/timing or prior benchmark findings.
-An empty or partial plan may be valid without good performance. The primary
-deadline denominator remains all incidents, so omissions are never rewarded.
+| Responder / call | Departure | Arrival | Treatment finished |
+| --- | ---: | ---: | ---: |
+| R1 / I2 | 0 | 86.778035 | 116.778035 |
+| R2 / I4 | 0 | 53.067823 | 63.067823 |
+| R4 / I1 | 10 | 66.968786 | 76.968786 |
+| R1 / I5 | 120 | 197.347140 | 217.347140 |
 
-Replay is independent of simulator state/timing helpers/graph/search/allocator,
-but reuses the tested Bayesian inference and Statistics data container. It is
-therefore not an independent proof of probability inference, true road conditions
-or calibration. The fixed JSON schema contains no reported arrival/treatment
-durations; validation reconstructs them, and export compares them with the richer
-simulation records. Absence of future-aware decision making cannot be established
-from the final plan alone; existing snapshot-boundary tests address that separately.
+R4 starts busy until 10. R1 stays at N2 after I2, then waits until 120 for its scripted next departure. I5 was released at 50 and has deadline 200, so treatment can finish after 200. I3, I6 and I7 are unhandled because this script never requests them. This checks execution; it is not an automatic allocation strategy.
 
-No final report.pdf exists yet. The maximum3-content-page report (optional extra
-prompt page), prominent GitHub link, required repository access/submission and
-oral defence preparation remain deliverables. Real road-failure recovery/live
-traffic/optimal full-horizon planning are documented limitations, not additional
-mandatory features invented by this task.
+## What passing tests cannot prove
 
+The tests establish behaviour for the checked inputs. They do not prove real-world road safety, calibrated probabilities, or the best possible allocation over every future incident.
 
-## Diagnostic feature verification
+The validator independently rebuilds routes and timelines, but shares Bayesian inference and the statistics record type with the application. Separate arithmetic tests check that shared probability calculation. A final plan alone cannot prove the allocator was kept unaware of future calls; snapshot tests check that boundary separately. An arbitrary Python callback could still read files outside that interface.
 
-All 160 tests pass after adding the explanation feature (148 existing tests plus 12 new tests). The actual-scenario regression test runs all three scenarios in strict and late mode with the approved Bayesian/HMM-bounded policy, then compares recording on with recording off. It compares complete assignments, arrivals, completions, final states, event logs, plans and every original statistic. No differences are allowed.
+We have not measured a percentage of code lines or branches tested, so we do not claim 100% coverage. macOS/Linux execution has not been directly tested here. Historical traffic has no supplied age, the simulator has no actual blockage/recovery events, and larger graphs can reach the bounded search's explicit limit. Patient transport, hospital handover, automatic station return and Critical fallback are not implemented or evaluated. Current tests verify availability after treatment at the incident location, not those proposed extra journeys. Tiny differences near floating-point boundaries and solver time limits can matter.
 
-We also saved 48 runs from the code before this change and compared them with the updated code: three scenarios, strict/late deadlines, CSP/nearest allocation, and all-open/Bayesian-only/HMM-tie/HMM-bounded routing. Every existing execution field and statistic matched exactly. This was a development-time before/after check, not a new planning algorithm or benchmark policy.
+The dependency check is `python -m pip check`. The suite and dependency check passed on the tested setup. A report, repository access and submission still need their own checks; passing tests do not submit the project.
 
-Small fixtures check a busy responder becoming free too late, an eligible High call losing its responder to a Critical call, a missing skill, a disconnected directed graph, no responders, a deadline before release, late-only candidates, zero solver budget, and repeated decisions at the same timestamp. A search-call spy and captured dispatcher snapshots verify that diagnostic recording adds no search or dispatcher calls. Export tests keep the plan schema and independently replayed metrics unchanged. No test claims that these histories prove failure under all possible allocations.
+## Earlier test counts
 
-The diagnostic display checks also verify plain-language lateness, a short per-incident summary, and the absence of the earlier technical candidate label. Full histories and planning behaviour are unchanged.
+For development history, the suite grew through 17, 39, 72, 102, 121, 145, 148, 160 and finally **175** tests. Statements that a component was unfinished at an earlier stage are not descriptions of the current program. [LLM_NOTES.md](LLM_NOTES.md) keeps the development decisions and corrections.
