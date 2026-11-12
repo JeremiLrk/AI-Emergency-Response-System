@@ -4,7 +4,11 @@ This Python project plans emergency responses after a storm. It checks road repo
 
 ## Get started
 
-Use **64-bit Python 3.12**. The project was tested on Windows with Python 3.12.14 and OR-Tools 9.15.6755. The application uses portable Python paths. macOS and Linux commands are provided below, but those operating systems have not been tested directly here.
+Use **64-bit Python 3.12** to reproduce the original setup. All 175 tests passed on Windows with Python 3.12.14 and OR-Tools 9.15.6755. **Python 3.14.10 also passed all tests and all three menu runs**, producing unchanged plans. The commands below use 3.12; if you have 3.14 installed, use `py -3.14` or `python3.14` when creating the environment instead. The other commands stay the same.
+
+**Do not use Python 3.15 for this version of the project.** Its required OR-Tools release has no compatible Python 3.15 package, so installation fails. Newer Python is not automatically better when a required library does not support it yet. The tested 3.12 environment remains unchanged.
+
+The application uses portable Python paths. macOS and Linux commands are provided below, but those operating systems have not been tested directly here.
 
 First download the repository ZIP and extract it, or clone it:
 
@@ -24,7 +28,7 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe run.py
 ```
 
-If the Windows launcher command is unavailable, use your installed Python 3.12 executable in place of py -3.12.
+If `py -3.12` is unavailable or cannot find Python 3.12, use your installed Python 3.12 executable instead. In PowerShell, a quoted executable path needs `&` before it, for example `& "C:\path\to\python.exe" -m venv .venv`.
 
 ### macOS or Linux (terminal)
 
@@ -42,7 +46,7 @@ If the installed command is python3, check python3 --version first and use it to
 
 The pinned OR-Tools release provides Python 3.12 packages for Windows x86-64, Intel and Apple Silicon Macs, and common 64-bit Linux systems. Older or unusual operating systems may lack a compatible package. See the [release files](https://pypi.org/project/ortools/9.15.6755/#files) for the supported platform versions. If pip reports no matching distribution, check the Python version, architecture and pip version first.
 
-requirements.txt lists the one direct third-party dependency. pip installs OR-Tools' own dependencies automatically. The other project imports come from Python's standard library.
+`requirements.txt` lists the one direct third-party dependency, OR-Tools. pip installs its own dependencies automatically. The project and tests otherwise use Python's standard library. **pytest is not required:** tests use the built-in `unittest` framework, so no separate test package needs installing.
 
 ### Run it again later
 
